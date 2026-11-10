@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { CODE_RE, LIMITS } from '../../../shared/protocol';
+import type { Look } from '../../../shared/look';
 import { loadAccess, myWeddings } from '../lib/identity';
 import { CharacterPreview } from './CharacterEditor';
 
-const GROOM = { skin: 1, hair: 'short', hairColor: 0, outfit: 'suit', color: 10 } as const;
-const BRIDE = { skin: 0, hair: 'long', hairColor: 1, outfit: 'dress', color: 9 } as const;
+const GROOM: Look = { gender: 'male', skin: 2, face: 'happy', hair: 'sidepart', hairColor: 1, top: 'tux', topColor: 5, bottom: 'pants', bottomColor: 5, accessory: 'none', accColor: 0 };
+const BRIDE: Look = { gender: 'female', skin: 1, face: 'sparkle', hair: 'wavy', hairColor: 2, top: 'gown', topColor: 0, bottom: 'skirt', bottomColor: 0, accessory: 'veil', accColor: 0 };
 
 interface Props {
   onCreate: (c: { groom: string; bride: string; date: string; role: 'groom' | 'bride' }) => void;

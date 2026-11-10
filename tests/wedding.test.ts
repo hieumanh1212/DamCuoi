@@ -233,3 +233,16 @@ describe('Đám cưới', () => {
   });
 });
 
+
+describe('Ngoại hình', () => {
+  it('chuyển ngoại hình định dạng cũ sang mới, giá trị lạ thì dùng mặc định', async () => {
+    const { sanitizeLook, weddingLook } = await import('../shared/look');
+    const old = sanitizeLook({ skin: 2, hair: 'long', hairColor: 1, outfit: 'aodai', color: 3 });
+    expect(old).toMatchObject({ gender: 'female', top: 'aodai', topColor: 3, hair: 'long', skin: 2 });
+    const bad = sanitizeLook({ gender: 'x', hair: 'xyz', top: 'bikini', skin: 99, accessory: '<script>' });
+    expect(bad).toMatchObject({ gender: 'male', hair: 'short', top: 'tshirt', skin: 1, accessory: 'none' });
+    expect(weddingLook(old, 'bride')).toMatchObject({ top: 'gown', accessory: 'veil' });
+    expect(weddingLook(old, 'groom').top).toBe('tux');
+    expect(weddingLook(old, 'guest')).toBe(old);
+  });
+});

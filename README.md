@@ -16,7 +16,8 @@ Tiệc cưới ảo nhiều người chơi trên trình duyệt. Cô dâu chú r
 - **Link quản lý** (bí mật) để nửa kia cùng trang trí và tổ chức nghi lễ. Cô dâu chú rể có thể xóa lời chúc không phù hợp.
 
 **Khách mời**
-- Nhân vật **chibi có khối** (đầu to, mắt long lanh, tóc bóng). Tự chọn màu da, 6 kiểu tóc, màu tóc, trang phục (sơ mi, áo dài, váy, vest) và màu áo. Cô dâu tự động mặc váy cưới xòe có voan và vương miện, chú rể mặc vest và nơ đỏ.
+- Nhân vật **chibi có khối**, tuỳ chỉnh rất đa dạng: **giới tính** (Nam/Nữ), 8 màu da, 6 khuôn mặt, **16 kiểu tóc** × 16 màu tóc, **12 trang phục thường** + 5 trang phục cưới, 5 kiểu quần/váy, **24 màu** quần áo, **14 phụ kiện** (kính, mũ, nơ, hoa cài, vương miện, voan, khăn đóng, tai thỏ, tai mèo...). Mỗi lựa chọn có hình xem trước của chính nhân vật. Cô dâu chú rể chọn trong các trang phục cưới (váy cưới, váy đuôi cá, vest cưới, vest trắng, áo dài cưới).
+- Nhạc nền đám cưới (Canon in D, Bridal Chorus và 3 bản sáng tác riêng) tổng hợp ngay trên trình duyệt; cô dâu chú rể chọn bài hoặc dán link mp3. Tiện ích: máy hát, chuông cưới, cây điều ước, karaoke, bệ pháo hoa.
 - Di chuyển bằng **WASD/mũi tên**, hoặc **chạm vào chỗ muốn đến** để nhân vật tự tìm đường. Chạm vào ghế để ngồi.
 - Chat có bong bóng hiện trên đầu nhân vật, và 8 biểu cảm. **Khung trò chuyện đóng/mở được**, có đếm tin chưa đọc; trên điện thoại khung chat là ngăn kéo vuốt lên.
 - **Mừng cưới:** chọn màu phong bì, viết lời chúc, bỏ vào hòm. Lời chúc được lưu trong **sổ lưu bút**. Game không dùng tiền thật.

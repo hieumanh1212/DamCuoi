@@ -1,9 +1,9 @@
 // Vẽ mọi thứ bằng canvas (không dùng ảnh): sàn, tường, sân khấu, đồ trang trí, nhân vật chibi, bong bóng chat
-import { HAIR_COLORS, OUTFIT_COLORS, SKINS, type Look, type Role } from '../../../shared/look';
+import type { Role } from '../../../shared/look';
 import { ACCENTS, type WeddingInfo } from '../../../shared/protocol';
 import { DOOR, HALL_H, HALL_W, ITEM_COLORS, STAGE, TILE, itemSize, ITEM_DEFS, type Item } from '../../../shared/world';
 
-type Ctx = CanvasRenderingContext2D;
+export type Ctx = CanvasRenderingContext2D;
 type Fill = string | CanvasGradient;
 const T = TILE;
 export const UI_FONT = '"Be Vietnam Pro", "Segoe UI", system-ui, sans-serif';
@@ -42,7 +42,7 @@ export function rr(ctx: Ctx, x: number, y: number, w: number, h: number, r: numb
   ctx.arcTo(x, y, x + w, y, rad);
   ctx.closePath();
 }
-const fillRR = (ctx: Ctx, x: number, y: number, w: number, h: number, r: number, fill: Fill, stroke?: string) => {
+export const fillRR = (ctx: Ctx, x: number, y: number, w: number, h: number, r: number, fill: Fill, stroke?: string) => {
   rr(ctx, x, y, w, h, r);
   ctx.fillStyle = fill;
   ctx.fill();
@@ -54,14 +54,14 @@ export const circle = (ctx: Ctx, x: number, y: number, r: number, fill: Fill) =>
   ctx.fillStyle = fill;
   ctx.fill();
 };
-const ellipse = (ctx: Ctx, x: number, y: number, rx: number, ry: number, fill: Fill, rot = 0) => {
+export const ellipse = (ctx: Ctx, x: number, y: number, rx: number, ry: number, fill: Fill, rot = 0) => {
   ctx.beginPath();
   ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
   ctx.fillStyle = fill;
   ctx.fill();
 };
 /** Bóng mềm dưới vật thể */
-function softShadow(ctx: Ctx, x: number, y: number, rx: number, ry: number, a = 0.22) {
+export function softShadow(ctx: Ctx, x: number, y: number, rx: number, ry: number, a = 0.22) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(1, ry / rx);
@@ -75,14 +75,14 @@ function softShadow(ctx: Ctx, x: number, y: number, rx: number, ry: number, a = 
   ctx.restore();
 }
 /** Hình cầu có khối (gradient tròn sáng góc trên-trái) */
-function ball(ctx: Ctx, x: number, y: number, r: number, color: string) {
+export function ball(ctx: Ctx, x: number, y: number, r: number, color: string) {
   const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
   g.addColorStop(0, shade(color, 0.45));
   g.addColorStop(0.6, color);
   g.addColorStop(1, shade(color, -0.25));
   circle(ctx, x, y, r, g);
 }
-const vgrad = (ctx: Ctx, y0: number, y1: number, c: string, light = 0.18, dark = -0.18) => {
+export const vgrad = (ctx: Ctx, y0: number, y1: number, c: string, light = 0.18, dark = -0.18) => {
   const g = ctx.createLinearGradient(0, y0, 0, y1);
   g.addColorStop(0, shade(c, light));
   g.addColorStop(1, shade(c, dark));
@@ -1428,315 +1428,7 @@ export function drawItem(ctx: Ctx, it: Item, info: WeddingInfo, t: number) {
   }
 }
 
-// ───────── Nhân vật chibi ─────────
-export interface CharPose {
-  d: number; // 0 xuống, 1 trái, 2 lên, 3 phải
-  walk: number; // pha bước chân (radian), -1 = đứng yên
-  sitting: boolean;
-}
-
-const R = 10; // bán kính đầu
-
-export function drawCharacter(ctx: Ctx, px: number, py: number, look: Look, role: Role, pose: CharPose) {
-  const skin = SKINS[look.skin] ?? SKINS[0];
-  const hair = HAIR_COLORS[look.hairColor] ?? HAIR_COLORS[0];
-  let outfit: string = look.outfit;
-  let color = OUTFIT_COLORS[look.color] ?? OUTFIT_COLORS[0];
-  if (role === 'bride') { outfit = 'gown'; color = '#ffffff'; }
-  if (role === 'groom') { outfit = 'tux'; color = '#262a35'; }
-
-  const { d, sitting } = pose;
-  const walking = pose.walk >= 0 && !sitting;
-  const sw = walking ? Math.sin(pose.walk) : 0;
-  const bob = walking ? Math.abs(sw) * 1.6 : Math.sin(performance.now() / 600) * 0.35;
-  const by = py - bob + (sitting ? 5 : 0);
-  const front = d === 0, back = d === 2;
-  const side = d === 1 ? -1 : d === 3 ? 1 : 0;
-  const hy = by - 27; // tâm đầu
-  const top = by - 16; // vai
-
-  softShadow(ctx, px, py + 1, 12, 4.5, 0.28);
-
-  // ── lớp sau: voan, tóc dài, đuôi ngựa
-  if (role === 'bride' && !back) veil(ctx, px, hy, by, 0.7);
-  if (!back && (look.hair === 'long' || role === 'bride')) {
-    fillRR(ctx, px - R - 1, hy - 2, 2 * R + 2, 17, 7, vgrad(ctx, hy, hy + 15, hair, 0.05, -0.25));
-  }
-  if (!back && look.hair === 'ponytail') {
-    const tx = side ? px - side * (R + 2) : px + R + 1;
-    ellipse(ctx, tx, hy + 4, 3.2, 7, vgrad(ctx, hy - 3, hy + 11, hair, 0.2, -0.2), side ? -side * 0.3 : -0.3);
-  }
-
-  // ── chân & giày
-  if (!sitting && outfit !== 'gown') {
-    const pants = outfit === 'aodai' ? '#fafafa' : outfit === 'dress' ? skin : '#3b4150';
-    const l = sw * 2.2;
-    for (const [lx, lift] of [[-3.6, Math.max(0, l)], [3.6, Math.max(0, -l)]] as const) {
-      fillRR(ctx, px + lx - 2.2, by - 7 + lift * 0.5, 4.4, 6 - lift * 0.5, 2, vgrad(ctx, by - 7, by - 1, pants, 0.1, -0.2));
-      ellipse(ctx, px + lx + (side * 1), by - 1 - lift * 0.6, 3.3, 2.2, '#2e2a2a');
-      circle(ctx, px + lx - 0.8 + side, by - 1.8 - lift * 0.6, 0.8, 'rgba(255,255,255,0.35)');
-    }
-  }
-
-  // ── thân
-  const bodyGrad = (c: string) => vgrad(ctx, top, by, c, 0.22, -0.2);
-  switch (outfit) {
-    case 'gown': {
-      ctx.beginPath();
-      ctx.moveTo(px - 5.5, top);
-      ctx.lineTo(px + 5.5, top);
-      ctx.bezierCurveTo(px + 8, by - 8, px + 15, by - 3, px + 14, by + 1.5);
-      ctx.quadraticCurveTo(px, by + 4.5, px - 14, by + 1.5);
-      ctx.bezierCurveTo(px - 15, by - 3, px - 8, by - 8, px - 5.5, top);
-      ctx.closePath();
-      const g = ctx.createLinearGradient(px - 14, 0, px + 14, 0);
-      g.addColorStop(0, '#f1eef7');
-      g.addColorStop(0.4, '#ffffff');
-      g.addColorStop(1, '#dcd7e6');
-      ctx.fillStyle = g;
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(150,140,170,0.35)';
-      ctx.lineWidth = 0.8;
-      ctx.stroke();
-      for (let i = -12; i <= 12; i += 3) circle(ctx, px + i, by + 1.5 + Math.abs(i) * -0.08 + 1.4, 0.9, 'rgba(200,190,220,0.8)');
-      ctx.strokeStyle = 'rgba(210,200,230,0.9)';
-      ctx.beginPath();
-      ctx.moveTo(px - 5, top + 4); ctx.quadraticCurveTo(px, top + 7, px + 5, top + 4);
-      ctx.stroke();
-      break;
-    }
-    case 'dress':
-      ctx.beginPath();
-      ctx.moveTo(px - 6, top);
-      ctx.lineTo(px + 6, top);
-      ctx.quadraticCurveTo(px + 9, by - 9, px + 10.5, by - 4);
-      ctx.quadraticCurveTo(px, by - 1.5, px - 10.5, by - 4);
-      ctx.quadraticCurveTo(px - 9, by - 9, px - 6, top);
-      ctx.closePath();
-      ctx.fillStyle = bodyGrad(color);
-      ctx.fill();
-      ctx.fillStyle = shade(color, -0.3);
-      ctx.fillRect(px - 5.5, top + 5, 11, 1.6);
-      break;
-    case 'aodai': {
-      fillRR(ctx, px - 7, top, 14, 12, 5, bodyGrad(color));
-      const flap = walking ? sw * 1.5 : 0;
-      ctx.beginPath();
-      ctx.moveTo(px - 5.5, top + 9);
-      ctx.lineTo(px + 5.5, top + 9);
-      ctx.lineTo(px + 5 + flap, by - 0.5);
-      ctx.lineTo(px - 5 + flap, by - 0.5);
-      ctx.closePath();
-      ctx.fillStyle = vgrad(ctx, top + 9, by, color, 0.05, -0.25);
-      ctx.fill();
-      fillRR(ctx, px - 2.5, top - 1, 5, 3, 1, shade(color, -0.2));
-      break;
-    }
-    case 'suit':
-    case 'tux':
-      fillRR(ctx, px - 7.5, top, 15, 12, 5, bodyGrad(color));
-      if (front) {
-        ctx.beginPath();
-        ctx.moveTo(px - 3.5, top); ctx.lineTo(px + 3.5, top); ctx.lineTo(px, top + 8); ctx.closePath();
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
-        ctx.fillStyle = shade(color, -0.35);
-        ctx.beginPath(); ctx.moveTo(px - 3.5, top); ctx.lineTo(px - 1, top + 6); ctx.lineTo(px - 5, top + 3); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(px + 3.5, top); ctx.lineTo(px + 1, top + 6); ctx.lineTo(px + 5, top + 3); ctx.fill();
-        if (outfit === 'tux') {
-          ctx.fillStyle = '#d32f2f';
-          ctx.beginPath();
-          ctx.moveTo(px, top + 2); ctx.lineTo(px - 3.2, top + 0.5); ctx.lineTo(px - 3.2, top + 3.5);
-          ctx.moveTo(px, top + 2); ctx.lineTo(px + 3.2, top + 0.5); ctx.lineTo(px + 3.2, top + 3.5);
-          ctx.fill();
-          ball(ctx, px - 5, top + 4.5, 1.6, '#e53935');
-        } else {
-          ctx.fillStyle = shade(color, 0.5);
-          ctx.fillRect(px - 0.8, top + 2, 1.6, 6);
-        }
-        circle(ctx, px, top + 9.5, 0.7, 'rgba(255,255,255,0.6)');
-      }
-      break;
-    default:
-      fillRR(ctx, px - 7.5, top, 15, 12, 5, bodyGrad(color));
-      if (front) {
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath(); ctx.moveTo(px - 3, top); ctx.lineTo(px + 3, top); ctx.lineTo(px, top + 3.5); ctx.fill();
-      }
-      fillRR(ctx, px - 7, top + 10, 14, 3, 1.5, '#3b4150');
-  }
-
-  // ── tay
-  const sleeve = outfit === 'gown' ? skin : color;
-  const armSw = walking ? sw * 2.2 : 0;
-  const arm = (ax: number, dy: number) => {
-    fillRR(ctx, ax - 2.2, top + 1 + dy, 4.4, 9, 2.2, vgrad(ctx, top, top + 10, sleeve, 0.2, -0.2));
-    ball(ctx, ax, top + 10.5 + dy, 2.2, skin);
-  };
-  if (d !== 3) arm(px - 9, armSw);
-  if (d !== 1) arm(px + 9, -armSw);
-
-  if (role === 'bride' && front) {
-    flower(ctx, px - 2.5, top + 9, 3.2, '#f48fb1');
-    flower(ctx, px + 2.5, top + 10, 3.2, '#ffffff');
-    flower(ctx, px, top + 6.5, 2.8, '#ffcdd2');
-  }
-
-  // ── đầu (hình cầu có khối)
-  const hg = ctx.createRadialGradient(px - 3.5, hy - 4, 1, px, hy, R + 1);
-  hg.addColorStop(0, shade(skin, 0.25));
-  hg.addColorStop(0.7, skin);
-  hg.addColorStop(1, shade(skin, -0.15));
-  circle(ctx, px, hy, R, hg);
-  if (!back) {
-    // tai
-    if (front) { ball(ctx, px - R + 0.5, hy + 1.5, 2.3, skin); ball(ctx, px + R - 0.5, hy + 1.5, 2.3, skin); }
-    else ball(ctx, px - side * 2.5, hy + 1.5, 2.3, skin);
-    circle(ctx, px, hy, R, hg);
-  }
-
-  if (back) {
-    hairBack(ctx, px, hy, by, look.hair, hair, role === 'bride');
-    if (role === 'bride') veil(ctx, px, hy, by, 0.85);
-  } else {
-    face(ctx, px, hy, side, front);
-    hairFront(ctx, px, hy, look.hair, hair, side, role === 'bride');
-    if (role === 'bride') {
-      // vương miện nhỏ lấp lánh
-      ctx.fillStyle = '#ffd54f';
-      for (let i = -2; i <= 2; i++) {
-        ctx.beginPath();
-        ctx.moveTo(px + i * 2.4 - 1.2, hy - R + 1);
-        ctx.lineTo(px + i * 2.4, hy - R - 2 - (i === 0 ? 1.5 : 0));
-        ctx.lineTo(px + i * 2.4 + 1.2, hy - R + 1);
-        ctx.fill();
-      }
-      circle(ctx, px, hy - R - 2.6, 0.9, '#ffffff');
-    }
-  }
-}
-
-function veil(ctx: Ctx, px: number, hy: number, by: number, a: number) {
-  ctx.beginPath();
-  ctx.moveTo(px - 8, hy - 7);
-  ctx.quadraticCurveTo(px - 18, hy + 10, px - 13, by - 2);
-  ctx.lineTo(px + 13, by - 2);
-  ctx.quadraticCurveTo(px + 18, hy + 10, px + 8, hy - 7);
-  ctx.closePath();
-  const g = ctx.createLinearGradient(0, hy - 7, 0, by);
-  g.addColorStop(0, `rgba(255,255,255,${a})`);
-  g.addColorStop(1, `rgba(255,255,255,${a * 0.35})`);
-  ctx.fillStyle = g;
-  ctx.fill();
-}
-
-function face(ctx: Ctx, px: number, hy: number, side: number, front: boolean) {
-  const eye = (ex: number) => {
-    ellipse(ctx, ex, hy + 2, 1.7, 2.4, '#2b1f22');
-    circle(ctx, ex + 0.55, hy + 1, 0.75, '#ffffff');
-    circle(ctx, ex - 0.5, hy + 3, 0.35, 'rgba(255,255,255,0.8)');
-  };
-  if (front) {
-    eye(px - 3.7);
-    eye(px + 3.7);
-    ellipse(ctx, px - 6, hy + 5, 2, 1.2, 'rgba(255,110,130,0.4)');
-    ellipse(ctx, px + 6, hy + 5, 2, 1.2, 'rgba(255,110,130,0.4)');
-    ctx.beginPath();
-    ctx.arc(px, hy + 5, 1.5, 0.15, Math.PI - 0.15);
-    ctx.strokeStyle = '#8d4b3a';
-    ctx.lineWidth = 0.9;
-    ctx.stroke();
-  } else {
-    eye(px + side * 4.6);
-    ellipse(ctx, px + side * 5.5, hy + 5.2, 1.7, 1.1, 'rgba(255,110,130,0.4)');
-    ctx.beginPath();
-    ctx.arc(px + side * 6, hy + 5.3, 1, 0, Math.PI);
-    ctx.strokeStyle = '#8d4b3a';
-    ctx.lineWidth = 0.8;
-    ctx.stroke();
-  }
-}
-
-function hairGrad(ctx: Ctx, hy: number, hair: string) {
-  return vgrad(ctx, hy - R - 2, hy + 4, hair, 0.28, -0.12);
-}
-
-function shine(ctx: Ctx, px: number, hy: number) {
-  ctx.beginPath();
-  ctx.arc(px - 1, hy - 1, R - 2.5, Math.PI * 1.15, Math.PI * 1.42);
-  ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-  ctx.lineWidth = 1.6;
-  ctx.lineCap = 'round';
-  ctx.stroke();
-  ctx.lineCap = 'butt';
-}
-
-function hairFront(ctx: Ctx, px: number, hy: number, style: string, hair: string, side: number, bride: boolean) {
-  const g = hairGrad(ctx, hy, hair);
-  // mái
-  ctx.beginPath();
-  ctx.ellipse(px, hy - 1.5, R + 1.2, R + 0.6, 0, Math.PI, Math.PI * 2);
-  ctx.fillStyle = g;
-  ctx.fill();
-  if (side) {
-    // nhìn ngang: tóc phủ nửa đầu phía sau
-    ellipse(ctx, px - side * 3.2, hy + 0.5, R * 0.78, R * 0.95, g);
-    ellipse(ctx, px + side * 3, hy - 2.5, 6, 3.6, g, side * 0.3);
-  } else {
-    // mái bằng 3 lọn
-    ellipse(ctx, px - 5, hy - 2.6, 5.2, 4, g, 0.25);
-    ellipse(ctx, px + 0.5, hy - 3.2, 5.4, 3.8, g);
-    ellipse(ctx, px + 5.5, hy - 2.6, 4.6, 3.8, g, -0.25);
-    if (style !== 'short' && style !== 'spiky') {
-      fillRR(ctx, px - R - 1.2, hy - 2, 3.4, style === 'long' || bride ? 14 : 8, 1.7, g);
-      fillRR(ctx, px + R - 2.2, hy - 2, 3.4, style === 'long' || bride ? 14 : 8, 1.7, g);
-    }
-  }
-  switch (style) {
-    case 'bun':
-      ball(ctx, px, hy - R - 2.5, 4.8, hair);
-      break;
-    case 'curly':
-      for (let i = 0; i < 9; i++) {
-        const a = Math.PI + (i / 8) * Math.PI;
-        ball(ctx, px + Math.cos(a) * (R + 0.5), hy - 1 + Math.sin(a) * (R + 0.5), 3.3, hair);
-      }
-      break;
-    case 'spiky':
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      for (let i = 0; i < 6; i++) {
-        const sx = px - 9 + i * 3.6;
-        ctx.moveTo(sx, hy - 6); ctx.lineTo(sx + 1.8, hy - 14 + (i % 2) * 2); ctx.lineTo(sx + 3.6, hy - 6);
-      }
-      ctx.fill();
-      break;
-  }
-  if (bride) ball(ctx, px, hy - R - 2, 4.3, hair);
-  shine(ctx, px, hy);
-}
-
-function hairBack(ctx: Ctx, px: number, hy: number, by: number, style: string, hair: string, bride: boolean) {
-  const g = hairGrad(ctx, hy, hair);
-  if (style === 'long' || bride) fillRR(ctx, px - R - 1, hy - 2, 2 * R + 2, by - hy - 6, 8, vgrad(ctx, hy, by, hair, 0.1, -0.25));
-  ellipse(ctx, px, hy - 0.5, R + 1.2, R + 0.6, g);
-  if (style === 'bun' || bride) ball(ctx, px, hy - 6, 4.8, hair);
-  if (style === 'ponytail') ellipse(ctx, px, hy + 9, 3.4, 7.5, vgrad(ctx, hy + 2, hy + 16, hair, 0.15, -0.2));
-  if (style === 'curly') for (let i = 0; i < 10; i++) {
-    const a = (i / 10) * Math.PI * 2;
-    ball(ctx, px + Math.cos(a) * R, hy + Math.sin(a) * R, 3.2, hair);
-  }
-  if (style === 'spiky') {
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const sx = px - 9 + i * 3.6;
-      ctx.moveTo(sx, hy - 6); ctx.lineTo(sx + 1.8, hy - 14 + (i % 2) * 2); ctx.lineTo(sx + 3.6, hy - 6);
-    }
-    ctx.fill();
-  }
-  shine(ctx, px, hy);
-}
+// Nhân vật: xem ./character.ts
 
 // ───────── Tên, bong bóng chat ─────────
 export function drawNameTag(ctx: Ctx, px: number, py: number, name: string, role: Role, me: boolean) {

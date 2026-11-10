@@ -4,7 +4,8 @@ import {
   HALL_H, HALL_W, ITEM_DEFS, TILE, buildBlocked, canPlace, findPath, isBlocked, itemSize, itemTiles,
   type Interact, type Item, type ItemType,
 } from '../../../shared/world';
-import { accentOf, circle, drawBubble, drawCharacter, drawHall, drawItem, drawNameTag, flower, heart, hexA, itemDepth } from './draw';
+import { drawCharacter } from './character';
+import { accentOf, circle, drawBubble, drawHall, drawItem, drawNameTag, flower, heart, hexA, itemDepth } from './draw';
 
 export interface SceneCallbacks {
   send(msg: ClientMsg): void;
