@@ -8,7 +8,7 @@ import { accentOf, circle, drawBubble, drawCharacter, drawHall, drawItem, drawNa
 
 export interface SceneCallbacks {
   send(msg: ClientMsg): void;
-  onInteract(kind: Exclude<Interact, 'sit'>): void;
+  onInteract(kind: Exclude<Interact, 'sit'>, item: Item): void;
   onSelect(item: Item | null): void;
 }
 
@@ -25,7 +25,8 @@ type Effect =
   | { kind: 'confetti'; start: number; parts: { x: number; y: number; vx: number; vy: number; r: number; vr: number; c: string; s: number }[] }
   | { kind: 'hearts'; x: number; y: number; start: number }
   | { kind: 'sparkle'; x: number; y: number; start: number }
-  | { kind: 'bouquet'; from: string; to: string | null; start: number };
+  | { kind: 'bouquet'; from: string; to: string | null; start: number }
+  | { kind: 'firework'; x: number; y: number; start: number; bursts: { dx: number; h: number; c: string; delay: number }[] };
 
 const SPEED = 4.2; // ô / giây
 const WORLD_W = HALL_W * TILE;
@@ -56,6 +57,8 @@ export class Scene {
   private camX = WORLD_W / 2;
   private camY = WORLD_H / 2;
   private freeCam: { x: number; y: number } | null = null;
+  /** phần màn hình bị giao diện nổi che (px) — camera chừa chỗ để không bị che */
+  private insets = { top: 0, bottom: 0, left: 0, right: 0 };
 
   // trang trí
   private editing = false;
@@ -193,6 +196,18 @@ export class Scene {
     }
   }
 
+  /** Pháo hoa bắn lên từ bệ (tọa độ ô) */
+  firework(x: number, y: number) {
+    const colors = ['#ff4f8b', '#ffd54f', '#4fc3f7', '#b388ff', '#69f0ae', '#ff8a65', '#ffffff'];
+    const bursts = Array.from({ length: 5 }, (_, i) => ({
+      dx: (Math.random() - 0.5) * 220,
+      h: 140 + Math.random() * 120,
+      c: colors[Math.floor(Math.random() * colors.length)],
+      delay: i * 0.35 + Math.random() * 0.2,
+    }));
+    this.effects.push({ kind: 'firework', x: x * TILE, y: y * TILE, start: performance.now(), bursts });
+  }
+
   // ───────── Trang trí ─────────
   setEditing(on: boolean) {
     this.editing = on;
@@ -239,16 +254,16 @@ export class Scene {
 
   // ───────── Camera ─────────
   setZoom(z: number) {
-    this.zoom = Math.min(2.2, Math.max(0.5, z));
+    this.zoom = Math.min(2.4, Math.max(0.3, z));
   }
 
   getZoom() {
     return this.zoom;
   }
 
+  /** Phủ kín màn hình (cover): không còn khoảng trống hai bên, camera đi theo nhân vật */
   private baseScale() {
-    const fit = Math.min(this.vw / WORLD_W, this.vh / WORLD_H);
-    return fit >= 0.6 ? fit : 0.72;
+    return Math.max(this.vw / WORLD_W, this.vh / WORLD_H, 0.55);
   }
 
   private get scale() {
@@ -273,10 +288,17 @@ export class Scene {
     };
   }
 
-  private clampCam(c: number, view: number, world: number) {
-    const half = view / 2 / this.scale;
-    if (world <= half * 2) return world / 2;
-    return Math.min(world - half, Math.max(half, c));
+  setInsets(i: { top: number; bottom: number; left: number; right: number }) {
+    this.insets = i;
+  }
+
+  /** Giới hạn tâm camera; padA/padB là phần bị che ở đầu/cuối trục (px màn hình) */
+  private clampCam(c: number, view: number, world: number, padA = 0, padB = 0) {
+    const s = this.scale;
+    const lo = (view / 2 - padA) / s;
+    const hi = world - (view / 2 - padB) / s;
+    if (hi < lo) return world / 2 + (padB - padA) / 2 / s;
+    return Math.min(hi, Math.max(lo, c));
   }
 
   /** Ảnh chụp màn hình sảnh tiệc */
@@ -440,7 +462,7 @@ export class Scene {
       const s = itemSize(goal.item);
       const cx = goal.item.x + s.w / 2, cy = goal.item.y + s.h / 2;
       me.state.d = Math.abs(cx - me.state.x) > Math.abs(cy - me.state.y) ? (cx < me.state.x ? 1 : 3) : cy < me.state.y ? 2 : 0;
-      this.cb.onInteract(goal.interact);
+      this.cb.onInteract(goal.interact, goal.item);
     }
   }
 
@@ -537,17 +559,21 @@ export class Scene {
     // camera
     const me = this.meActor();
     const target = this.freeCam ?? (me ? { x: me.rx * TILE, y: me.ry * TILE } : { x: WORLD_W / 2, y: WORLD_H / 2 });
+    const I = this.insets;
     if (this.freeCam) {
-      this.freeCam.x = this.clampCam(this.freeCam.x, this.vw, WORLD_W);
-      this.freeCam.y = this.clampCam(this.freeCam.y, this.vh, WORLD_H);
+      this.freeCam.x = this.clampCam(this.freeCam.x, this.vw, WORLD_W, I.left, I.right);
+      this.freeCam.y = this.clampCam(this.freeCam.y, this.vh, WORLD_H, I.top, I.bottom);
     }
-    const cx = this.clampCam(target.x, this.vw, WORLD_W);
-    const cy = this.clampCam(target.y, this.vh, WORLD_H);
+    const cx = this.clampCam(target.x, this.vw, WORLD_W, I.left, I.right);
+    const cy = this.clampCam(target.y, this.vh, WORLD_H, I.top, I.bottom);
     this.camX += (cx - this.camX) * (this.freeCam ? 1 : 0.15);
     this.camY += (cy - this.camY) * (this.freeCam ? 1 : 0.15);
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = '#2b2236';
+    const bg = ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+    bg.addColorStop(0, '#f6e3ea');
+    bg.addColorStop(1, '#efe2d3');
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     const d = this.dpr;
     ctx.setTransform(d * s, 0, 0, d * s, d * (this.vw / 2 - this.camX * s), d * (this.vh / 2 - this.camY * s));
@@ -582,7 +608,7 @@ export class Scene {
         },
       });
     }
-    for (const [id, a] of this.actors) {
+    for (const [id, a] of this.editing ? [] : this.actors) {
       list.push({
         depth: a.ry + (a.state.s ? 0.05 : 0),
         draw: () => {
@@ -602,7 +628,7 @@ export class Scene {
 
     // tên, bong bóng chat, biểu cảm (luôn ở trên)
     const now = performance.now();
-    const sorted = [...this.actors.entries()].sort((a, b) => a[1].ry - b[1].ry);
+    const sorted = this.editing ? [] : [...this.actors.entries()].sort((a, b) => a[1].ry - b[1].ry);
     for (const [id, a] of sorted) drawNameTag(ctx, a.rx * TILE, a.ry * TILE + 8, a.state.name, a.state.role, id === this.me);
     for (const [, a] of sorted) {
       const px = a.rx * TILE, py = a.ry * TILE + 8 + (a.state.s ? 4 : 0);
@@ -689,10 +715,35 @@ export class Scene {
   private drawEffects(now: number) {
     const ctx = this.ctx;
     const accent = accentOf(this.info);
-    this.effects = this.effects.filter((e) => now - e.start < (e.kind === 'confetti' ? 5000 : e.kind === 'bouquet' ? 2600 : 2500));
+    this.effects = this.effects.filter((e) => now - e.start < (e.kind === 'confetti' ? 5000 : e.kind === 'bouquet' ? 2600 : e.kind === 'firework' ? 4200 : 2500));
     for (const e of this.effects) {
       const age = (now - e.start) / 1000;
-      if (e.kind === 'hearts') {
+      if (e.kind === 'firework') {
+        for (const b of e.bursts) {
+          const k = age - b.delay;
+          if (k < 0) continue;
+          const bx = e.x + b.dx * Math.min(1, k / 0.8), peak = e.y - b.h;
+          if (k < 0.8) {
+            // tên lửa bay lên
+            const ry = e.y - (b.h * k) / 0.8;
+            circle(ctx, e.x + b.dx * (k / 0.8), ry, 2.2, '#fff8e1');
+            ctx.globalAlpha = 0.5;
+            circle(ctx, e.x + b.dx * (k / 0.8) * 0.95, ry + 8, 1.5, '#ffcc80');
+            ctx.globalAlpha = 1;
+          } else {
+            const p = k - 0.8;
+            if (p > 2) continue;
+            ctx.globalAlpha = Math.max(0, 1 - p / 2);
+            for (let i = 0; i < 28; i++) {
+              const a = (i / 28) * Math.PI * 2;
+              const r = 8 + p * 70;
+              const px = bx + Math.cos(a) * r, py = peak + Math.sin(a) * r + p * p * 18;
+              circle(ctx, px, py, 2.4 - p * 0.8, i % 3 ? b.c : '#ffffff');
+            }
+            ctx.globalAlpha = 1;
+          }
+        }
+      } else if (e.kind === 'hearts') {
         for (let i = 0; i < 9; i++) {
           const k = (age * 0.8 + i / 9) % 1;
           ctx.globalAlpha = 1 - k;

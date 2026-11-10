@@ -11,6 +11,8 @@ import { isMuted, setMuted, sfx } from '../lib/sfx';
 import { CharacterEditor } from './CharacterEditor';
 import { GiftDialog, Guestbook, InviteDialog, Modal } from './Dialogs';
 import { EditPanel } from './EditPanel';
+import { MusicPanel } from './MusicPanel';
+import { music } from '../lib/music';
 
 export interface Session {
   code: string;
@@ -36,6 +38,9 @@ interface LogEntry {
 }
 
 type Panel = 'gift' | 'guestbook' | 'invite' | 'character' | null;
+
+const lsGet = (k: string, d: string) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
+const lsSet = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* bỏ qua */ } };
 let seq = 0;
 
 const CHAT_KEY = 'dam-cuoi:chatOpen';
@@ -81,6 +86,51 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
   const [emoteOpen, setEmoteOpen] = useState(false);
   const [muted, setMutedState] = useState(isMuted());
   const [draft, setDraft] = useState<Profile>(profile);
+  const [musicOpen, setMusicOpen] = useState(false);
+  const [musicOn, setMusicOn] = useState(() => lsGet('dam-cuoi:musicOn', '1') === '1');
+  const [volume, setVolume] = useState(() => Number(lsGet('dam-cuoi:volume', '0.6')));
+  const [fullscreen, setFullscreen] = useState(false);
+  const [showHint, setShowHint] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setShowHint(false), 12000);
+    return () => clearTimeout(t);
+  }, []);
+
+  // báo cho camera biết phần màn hình bị giao diện nổi che
+  const insetsRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const update = () => {
+      const mobile = window.innerWidth <= 820;
+      sceneRef.current?.setInsets({
+        top: mobile ? 112 : 80,
+        bottom: mobile ? 70 : 76,
+        left: editing && !mobile ? 330 : 0,
+        right: chatOpen && !mobile ? 330 : musicOpen && !mobile ? 370 : 0,
+      });
+    };
+    insetsRef.current = update;
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [editing, chatOpen, musicOpen]);
+  const canFullscreen = typeof document !== 'undefined' && !!document.documentElement.requestFullscreen;
+
+  // nhạc nền: phát bài cô dâu chú rể chọn
+  useEffect(() => {
+    if (!info) return;
+    music.play(musicOn ? info.music ?? 'canon' : 'off', info.musicUrl ?? '');
+  }, [info?.music, info?.musicUrl, musicOn, info]);
+  useEffect(() => music.setVolume(volume), [volume]);
+  useEffect(() => () => music.play('off'), []);
+  useEffect(() => {
+    const on = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', on);
+    return () => document.removeEventListener('fullscreenchange', on);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void document.documentElement.requestFullscreen?.().catch(() => {});
+  };
   const [, tick] = useState(0);
 
   chatOpenRef.current = chatOpen;
@@ -117,14 +167,31 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
   useEffect(() => {
     const scene = new Scene(canvasRef.current!, {
       send: (m) => connRef.current?.send(m),
-      onInteract: (kind) => {
-        if (kind === 'gift') setPanel('gift');
-        else if (kind === 'guestbook') setPanel('guestbook');
-        else takePhoto();
+      onInteract: (kind, item) => {
+        switch (kind) {
+          case 'gift':
+          case 'wish':
+            return setPanel('gift');
+          case 'guestbook':
+            return setPanel('guestbook');
+          case 'photo':
+            return takePhoto();
+          case 'music':
+            return setMusicOpen(true);
+          case 'bell':
+            sfx.bell();
+            return connRef.current?.send({ t: 'emote', e: '🔔' });
+          case 'sing':
+            sfx.sing();
+            return connRef.current?.send({ t: 'emote', e: '🎤' });
+          case 'firework':
+            return connRef.current?.send({ t: 'fx', kind: 'firework', x: item.x + 0.5, y: item.y + 0.5 });
+        }
       },
       onSelect: setSelected,
     });
     sceneRef.current = scene;
+    insetsRef.current();
 
     const onMessage = (m: ServerMsg) => {
       const people = peopleRef.current;
@@ -200,6 +267,10 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
           else if (m.kind === 'kiss') sfx.kiss();
           else sfx.chime();
           return;
+        case 'fx':
+          scene.firework(m.x, m.y);
+          sfx.boom();
+          return;
         case 'error':
           if (m.code === 'exists') onCodeTaken();
           else setError(m.message);
@@ -223,6 +294,8 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
     );
     connRef.current = conn;
     conn.connect();
+    // lối tắt cho kiểm thử tự động (chỉ khi chạy dev)
+    if (import.meta.env.DEV) Object.assign(window, { __send: (m: never) => conn.send(m), __scene: scene });
     return () => {
       conn.close();
       scene.destroy();
@@ -313,6 +386,8 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
           <button className="tb" onClick={() => setPanel('invite')} title="Mời khách"><i>🔗</i><span>Mời khách</span></button>
           <button className="tb" onClick={() => { setDraft(profile); setPanel('character'); }} title="Nhân vật"><i>👕</i><span>Nhân vật</span></button>
           <button className="tb" onClick={takePhoto} title="Chụp ảnh"><i>📸</i><span>Chụp ảnh</span></button>
+          <button className={`tb ${musicOpen ? 'on' : ''}`} onClick={() => setMusicOpen((v) => !v)} title="Nhạc"><i>{musicOn && info?.music !== 'off' ? '🎵' : '🔕'}</i><span>Nhạc</span></button>
+          {canFullscreen && <button className="tb" onClick={toggleFullscreen} title={fullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}><i>{fullscreen ? '🗗' : '⛶'}</i><span>{fullscreen ? 'Thu nhỏ' : 'Toàn màn hình'}</span></button>}
           <button className="tb icon" onClick={() => { setMuted(!muted); setMutedState(!muted); }} title="Âm thanh"><i>{muted ? '🔇' : '🔊'}</i></button>
         </nav>
       </header>
@@ -341,7 +416,20 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
             </div>
           )}
 
-          {!editing && <div className="hint">Chạm để đi · WASD/mũi tên · Chạm ghế để ngồi · Chạm 🎁 để mừng cưới</div>}
+          {!editing && showHint && <div className="hint">Chạm để đi · WASD/mũi tên · Chạm ghế để ngồi · Chạm 🎁 📻 🔔 🎆 để tương tác</div>}
+          {editing && <div className="edit-hint">👻 Đang ẩn khách mời để bạn trang trí dễ hơn · Kéo nền để di chuyển góc nhìn</div>}
+          {musicOpen && info && (
+            <MusicPanel
+              info={info}
+              couple={couple}
+              enabled={musicOn}
+              volume={volume}
+              onEnabled={(v) => { setMusicOn(v); lsSet('dam-cuoi:musicOn', v ? '1' : '0'); }}
+              onVolume={(v) => { setVolume(v); lsSet('dam-cuoi:volume', String(v)); }}
+              onSet={(patch) => send({ t: 'info', info: patch })}
+              onClose={() => setMusicOpen(false)}
+            />
+          )}
 
           {ceremonyBar && couple && (
             <div className="ceremony-bar">

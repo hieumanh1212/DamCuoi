@@ -1,7 +1,7 @@
 // Logic một đám cưới — không phụ thuộc Cloudflare để dễ test.
 import { sanitizeLook, type Role } from '../../shared/look';
 import {
-  ACCENTS, CEREMONIES, EMOTES, ENVELOPES, FLOORS, LIMITS,
+  ACCENTS, CEREMONIES, EMOTES, ENVELOPES, FLOORS, LIMITS, MUSIC_IDS,
   type ClientMsg, type ErrorCode, type PlayerState, type ServerMsg, type WeddingInfo, type Wish,
 } from '../../shared/protocol';
 import {
@@ -45,6 +45,7 @@ export class Wedding {
   private lastPos = new Map<string, { x: number; y: number }>();
   private dirty = new Set<string>();
   private lastCeremony = 0;
+  private lastFx = 0;
 
   constructor(
     private store: Store,
@@ -93,6 +94,7 @@ export class Wedding {
           welcome: 'Cảm ơn bạn đã đến chung vui cùng chúng mình!',
           floor: 'marble',
           accent: 0,
+          music: 'canon',
         },
         key: c.key,
         items,
@@ -172,6 +174,7 @@ export class Wedding {
       case 'itemColor': if (couple) this.recolor(msg.id, msg.color); return;
       case 'info': if (couple) this.updateInfo(msg.info); return;
       case 'resetLayout': if (couple) this.resetLayout(); return;
+      case 'fx': return this.fx(p, msg);
     }
   }
 
@@ -269,6 +272,17 @@ export class Wedding {
     this.broadcast({ t: 'notice', text: def.kind === 'bouquet' ? text : `${def.icon} ${text}` });
   }
 
+  /** Pháo hoa từ bệ pháo hoa — ai cũng bắn được nhưng giới hạn tần suất chung của cả sảnh */
+  private fx(p: Player, m: Extract<ClientMsg, { t: 'fx' }>) {
+    const now = Date.now();
+    const x = Number(m.x), y = Number(m.y);
+    if (m.kind !== 'firework' || !Number.isFinite(x) || !Number.isFinite(y) || now - this.lastFx < 2500) return;
+    const hasLauncher = this.saved!.items.some((i) => i.type === 'fireworks' && Math.abs(i.x + 0.5 - x) < 1 && Math.abs(i.y + 0.5 - y) < 1);
+    if (!hasLauncher) return;
+    this.lastFx = now;
+    this.broadcast({ t: 'fx', kind: 'firework', x, y, by: p.id });
+  }
+
   // ───────── Trang trí (chỉ cô dâu chú rể) ─────────
 
   private place(raw: unknown) {
@@ -328,6 +342,11 @@ export class Wedding {
     if (raw.welcome !== undefined) info.welcome = String(raw.welcome).trim().slice(0, LIMITS.welcomeLength);
     if (FLOORS.some((f) => f.id === raw.floor)) info.floor = raw.floor!;
     if (Number.isInteger(raw.accent) && raw.accent! >= 0 && raw.accent! < ACCENTS.length) info.accent = raw.accent!;
+    if (typeof raw.music === 'string' && MUSIC_IDS.includes(raw.music)) info.music = raw.music;
+    if (typeof raw.musicUrl === 'string') {
+      const url = raw.musicUrl.trim().slice(0, 400);
+      if (url === '' || /^https:\/\/[^\s"'<>]+$/.test(url)) info.musicUrl = url;
+    }
     void this.persist();
     this.broadcast({ t: 'info', info });
   }

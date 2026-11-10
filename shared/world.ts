@@ -15,10 +15,16 @@ export type ItemType =
   | 'flowers' | 'plant' | 'balloons' | 'lantern' | 'lamp' | 'heart' | 'hy' | 'candles' | 'teddy'
   | 'giftpile' | 'love' | 'swan' | 'pillar' | 'welcome' | 'tree_lights' | 'fountain'
   | 'carpet' | 'petals' | 'rug'
+  | 'table_square' | 'bench' | 'bar' | 'dessert' | 'fruit' | 'wine'
+  | 'drums' | 'guitar' | 'dj' | 'spotlight' | 'screen' | 'mrmrs'
+  | 'rose_wall' | 'heart_arch' | 'flower_stand' | 'vase_tall' | 'light_string' | 'chandelier' | 'ribbon'
+  | 'bird_cage' | 'sakura' | 'mai' | 'dao' | 'palm' | 'pond' | 'lantern_hoian' | 'star_lamp'
+  | 'rug_square' | 'grass' | 'heart_tile'
+  | 'jukebox' | 'bell' | 'wishtree' | 'karaoke' | 'fireworks'
   | 'giftbox' | 'guestbook' | 'photo';
 
 export type Layer = 'floor' | 'object';
-export type Interact = 'gift' | 'guestbook' | 'photo' | 'sit';
+export type Interact = 'gift' | 'guestbook' | 'photo' | 'sit' | 'music' | 'bell' | 'wish' | 'sing' | 'firework';
 
 export interface ItemDef {
   type: ItemType;
@@ -40,8 +46,9 @@ export interface ItemDef {
 
 /** Bảng màu cho đồ trang trí. Màu 0 = theo màu chủ đạo của đám cưới */
 export const ITEM_COLORS = [
-  'accent', '#e53950', '#ff7aa8', '#ffc1d3', '#c9a227', '#ffffff', '#b39ddb',
-  '#7e57c2', '#5c6bc0', '#4fc3f7', '#26a69a', '#81c784', '#ffb74d', '#455a64',
+  'accent', '#e53950', '#ff7aa8', '#ffc1d3', '#f8bbd0', '#c9a227', '#ffd54f', '#ffffff', '#f5e6c8',
+  '#b39ddb', '#7e57c2', '#5c6bc0', '#90caf9', '#4fc3f7', '#80cbc4', '#26a69a', '#81c784',
+  '#ffb74d', '#ff8a65', '#8d6e63', '#455a64', '#212121',
 ];
 
 export const CATALOG: ItemDef[] = [
@@ -74,10 +81,45 @@ export const CATALOG: ItemDef[] = [
   { type: 'swan', name: 'Thiên nga', icon: '🦢', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
   { type: 'fountain', name: 'Đài phun nước', icon: '⛲', w: 2, h: 2, layer: 'object', solid: true, group: 'Trang trí' },
   { type: 'welcome', name: 'Bảng chào mừng', icon: '🪧', w: 2, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
+  { type: 'table_square', name: 'Bàn vuông', icon: '⬜', w: 2, h: 2, layer: 'object', solid: true, colorable: true, group: 'Bàn ghế' },
+  { type: 'bench', name: 'Ghế băng', icon: '🪑', w: 2, h: 1, layer: 'object', solid: false, interact: 'sit', rotatable: true, colorable: true, group: 'Bàn ghế' },
+  { type: 'bar', name: 'Quầy bar', icon: '🍸', w: 3, h: 1, layer: 'object', solid: true, rotatable: true, group: 'Bàn ghế' },
+  { type: 'dessert', name: 'Bàn tráng miệng', icon: '🧁', w: 2, h: 1, layer: 'object', solid: true, colorable: true, group: 'Bàn ghế' },
+  { type: 'fruit', name: 'Tháp trái cây', icon: '🍇', w: 1, h: 1, layer: 'object', solid: true, group: 'Bàn ghế' },
+  { type: 'wine', name: 'Xe rượu vang', icon: '🍷', w: 1, h: 1, layer: 'object', solid: true, group: 'Bàn ghế' },
+  { type: 'drums', name: 'Bộ trống', icon: '🥁', w: 2, h: 2, layer: 'object', solid: true, colorable: true, group: 'Sân khấu' },
+  { type: 'guitar', name: 'Đàn guitar', icon: '🎸', w: 1, h: 1, layer: 'object', solid: true, group: 'Sân khấu' },
+  { type: 'dj', name: 'Bàn DJ', icon: '🎧', w: 2, h: 1, layer: 'object', solid: true, group: 'Sân khấu' },
+  { type: 'spotlight', name: 'Đèn sân khấu', icon: '🔦', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Sân khấu' },
+  { type: 'screen', name: 'Màn chiếu', icon: '📽️', w: 3, h: 1, layer: 'object', solid: true, group: 'Sân khấu' },
+  { type: 'mrmrs', name: 'Chữ Mr & Mrs', icon: '💑', w: 2, h: 1, layer: 'object', solid: true, colorable: true, group: 'Sân khấu' },
+  { type: 'rose_wall', name: 'Tường hoa hồng', icon: '🌹', w: 3, h: 1, layer: 'object', solid: true, rotatable: true, colorable: true, group: 'Trang trí' },
+  { type: 'heart_arch', name: 'Cổng trái tim', icon: '💞', w: 3, h: 1, layer: 'object', solid: false, colorable: true, group: 'Trang trí' },
+  { type: 'flower_stand', name: 'Lẵng hoa', icon: '💮', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Trang trí' },
+  { type: 'vase_tall', name: 'Bình hoa cao', icon: '🏺', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Trang trí' },
+  { type: 'light_string', name: 'Dây đèn', icon: '✨', w: 3, h: 1, layer: 'object', solid: false, colorable: true, group: 'Trang trí' },
+  { type: 'chandelier', name: 'Đèn chùm', icon: '💎', w: 2, h: 2, layer: 'object', solid: false, group: 'Trang trí' },
+  { type: 'ribbon', name: 'Nơ lớn', icon: '🎀', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Trang trí' },
+  { type: 'bird_cage', name: 'Lồng chim hoa', icon: '🕊️', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Trang trí' },
+  { type: 'lantern_hoian', name: 'Đèn lồng Hội An', icon: '🏮', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Trang trí' },
+  { type: 'star_lamp', name: 'Đèn ông sao', icon: '⭐', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Trang trí' },
+  { type: 'sakura', name: 'Cây anh đào', icon: '🌸', w: 2, h: 2, layer: 'object', solid: true, group: 'Trang trí' },
+  { type: 'mai', name: 'Cây mai vàng', icon: '🌼', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
+  { type: 'dao', name: 'Cây đào', icon: '🌺', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
+  { type: 'palm', name: 'Cây dừa', icon: '🌴', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
+  { type: 'pond', name: 'Hồ sen', icon: '🪷', w: 2, h: 2, layer: 'object', solid: true, group: 'Trang trí' },
   { type: 'carpet', name: 'Thảm đỏ', icon: '🟥', w: 1, h: 1, layer: 'floor', solid: false, colorable: true, group: 'Sàn & thảm' },
   { type: 'rug', name: 'Thảm tròn', icon: '⭕', w: 2, h: 2, layer: 'floor', solid: false, colorable: true, group: 'Sàn & thảm' },
   { type: 'dancefloor', name: 'Sàn nhảy LED', icon: '🪩', w: 2, h: 2, layer: 'floor', solid: false, group: 'Sàn & thảm' },
   { type: 'petals', name: 'Cánh hoa', icon: '🌺', w: 1, h: 1, layer: 'floor', solid: false, colorable: true, group: 'Sàn & thảm' },
+  { type: 'rug_square', name: 'Thảm vuông', icon: '🟪', w: 2, h: 2, layer: 'floor', solid: false, colorable: true, group: 'Sàn & thảm' },
+  { type: 'heart_tile', name: 'Gạch trái tim', icon: '💟', w: 1, h: 1, layer: 'floor', solid: false, colorable: true, group: 'Sàn & thảm' },
+  { type: 'grass', name: 'Thảm cỏ', icon: '🟩', w: 1, h: 1, layer: 'floor', solid: false, group: 'Sàn & thảm' },
+  { type: 'jukebox', name: 'Máy hát', icon: '📻', w: 1, h: 1, layer: 'object', solid: true, interact: 'music', group: 'Tiện ích' },
+  { type: 'bell', name: 'Chuông cưới', icon: '🔔', w: 1, h: 1, layer: 'object', solid: true, interact: 'bell', group: 'Tiện ích' },
+  { type: 'wishtree', name: 'Cây điều ước', icon: '🌳', w: 2, h: 2, layer: 'object', solid: true, interact: 'wish', group: 'Tiện ích' },
+  { type: 'karaoke', name: 'Micro karaoke', icon: '🎤', w: 1, h: 1, layer: 'object', solid: true, interact: 'sing', group: 'Tiện ích' },
+  { type: 'fireworks', name: 'Bệ pháo hoa', icon: '🎆', w: 1, h: 1, layer: 'object', solid: true, interact: 'firework', group: 'Tiện ích' },
   { type: 'giftbox', name: 'Hòm mừng cưới', icon: '🎁', w: 1, h: 1, layer: 'object', solid: true, interact: 'gift', group: 'Tiện ích' },
   { type: 'guestbook', name: 'Sổ lưu bút', icon: '📖', w: 1, h: 1, layer: 'object', solid: true, interact: 'guestbook', group: 'Tiện ích' },
   { type: 'photo', name: 'Khung chụp ảnh', icon: '📸', w: 2, h: 1, layer: 'object', solid: true, interact: 'photo', group: 'Tiện ích' },
@@ -242,6 +284,8 @@ export function defaultLayout(): Item[] {
   }
   add('tree_lights', 2, 6);
   add('tree_lights', HALL_W - 3, 6);
+  add('fireworks', 4, 6);
+  add('fireworks', HALL_W - 5, 6);
 
   // Thảm đỏ từ cửa lên sân khấu + cánh hoa hai bên
   for (let y = 6; y <= HALL_H - 2; y++) {
@@ -279,6 +323,9 @@ export function defaultLayout(): Item[] {
   add('lamp', 21, HALL_H - 2);
   add('heart', 4, HALL_H - 3);
   add('welcome', 8, HALL_H - 4);
+  add('jukebox', HALL_W - 3, HALL_H - 4);
+  add('bell', 2, HALL_H - 4);
+  add('wishtree', 25, HALL_H - 5);
 
   return items.map((it, i) => ({ ...it, id: i + 1 }));
 }

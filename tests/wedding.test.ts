@@ -137,11 +137,37 @@ describe('Đám cưới', () => {
     expect(last('groom', 'items')!.items.find((i) => i.id === table.id)?.color).toBe(3);
     w.handle('groom', { t: 'itemColor', id: table.id, color: 0 });
     expect(last('groom', 'items')!.items.find((i) => i.id === table.id)?.color).toBeUndefined();
-    const piano = { type: 'piano' as const, x: 2, y: 22, rot: 0, color: 4 };
+    const piano = { type: 'piano' as const, x: 8, y: 3, rot: 0, color: 4 };
     w.handle('groom', { t: 'place', item: piano });
     const placed = last('groom', 'items')!.items.at(-1)!;
     expect(placed.type).toBe('piano');
     expect(placed.color).toBeUndefined();
+  });
+
+  it('nhạc nền: mặc định Canon, cô dâu chú rể đổi được, link phải là https', async () => {
+    const { w, last } = await created();
+    expect(last('groom', 'welcome')!.info.music).toBe('canon');
+    w.handle('groom', { t: 'info', info: { music: 'waltz' } });
+    expect(last('groom', 'info')!.info.music).toBe('waltz');
+    w.handle('groom', { t: 'info', info: { music: 'url', musicUrl: 'https://example.com/nhac-cuoi.mp3' } });
+    expect(last('groom', 'info')!.info).toMatchObject({ music: 'url', musicUrl: 'https://example.com/nhac-cuoi.mp3' });
+    w.handle('groom', { t: 'info', info: { music: 'hack' as any, musicUrl: 'javascript:alert(1)' } });
+    expect(last('groom', 'info')!.info).toMatchObject({ music: 'url', musicUrl: 'https://example.com/nhac-cuoi.mp3' });
+    w.join('g1', 'ABCDE', hello());
+    w.handle('g1', { t: 'info', info: { music: 'off' } });
+    expect(last('groom', 'info')!.info.music).toBe('url');
+  });
+
+  it('pháo hoa: phải bắn từ bệ pháo hoa, có giới hạn tần suất', async () => {
+    const { w, last, msgs } = await created();
+    w.join('g1', 'ABCDE', hello());
+    const launcher = last('g1', 'welcome')!.items.find((i) => i.type === 'fireworks')!;
+    w.handle('g1', { t: 'fx', kind: 'firework', x: 10.5, y: 10.5 });
+    expect(last('groom', 'fx')).toBeUndefined();
+    w.handle('g1', { t: 'fx', kind: 'firework', x: launcher.x + 0.5, y: launcher.y + 0.5 });
+    expect(last('groom', 'fx')).toMatchObject({ kind: 'firework', by: 'g1' });
+    w.handle('g1', { t: 'fx', kind: 'firework', x: launcher.x + 0.5, y: launcher.y + 0.5 });
+    expect(msgs('groom').filter((m) => m.t === 'fx')).toHaveLength(1);
   });
 
   it('đổi thông tin & giao diện', async () => {

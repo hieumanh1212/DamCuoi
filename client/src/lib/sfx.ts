@@ -58,4 +58,7 @@ export const sfx = {
   },
   toast: () => { tone(1568, 0.15, 'sine'); tone(2093, 0.25, 'sine', 0.08); },
   kiss: () => melody([[659, 0.15], [880, 0.3]], 'sine'),
+  bell: () => { tone(1318, 0.9, 'sine', 0, 0.06); tone(1318 * 2.76, 0.5, 'sine', 0, 0.02); tone(1046, 1.1, 'sine', 0.35, 0.05); },
+  boom: () => { tone(90, 0.5, 'sine', 0, 0.12); for (let i = 0; i < 8; i++) tone(1500 + Math.random() * 2500, 0.06, 'square', 0.9 + i * 0.04, 0.012); },
+  sing: () => melody([[523, 0.2], [659, 0.2], [784, 0.2], [659, 0.4]], 'sine'),
 };

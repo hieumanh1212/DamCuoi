@@ -26,10 +26,29 @@ export const FLOORS = [
   { id: 'navy', name: 'Đêm đầy sao' },
   { id: 'lavender', name: 'Tím oải hương' },
   { id: 'beach', name: 'Bãi biển' },
+  { id: 'black', name: 'Đá đen sang trọng' },
+  { id: 'sky', name: 'Xanh pastel' },
+  { id: 'mint', name: 'Bạc hà' },
+  { id: 'checker', name: 'Ca rô cổ điển' },
+  { id: 'rosegold', name: 'Vàng hồng' },
 ] as const;
 export type FloorId = (typeof FLOORS)[number]['id'];
 
-export const ACCENTS = ['#e53950', '#ff7aa8', '#c9a227', '#8e5bd6', '#2e9e8f', '#1e88e5', '#ef6c00', '#5d4037', '#ad1457', '#00838f'];
+export const ACCENTS = [
+  '#e53950', '#ff7aa8', '#c9a227', '#8e5bd6', '#2e9e8f', '#1e88e5', '#ef6c00',
+  '#5d4037', '#ad1457', '#00838f', '#f06292', '#ffb300', '#43a047', '#3949ab',
+];
+
+/** Nhạc nền: các bản tổng hợp trong trình duyệt, hoặc link file nhạc do cô dâu chú rể dán */
+export const MUSIC_TRACKS = [
+  { id: 'canon', name: 'Canon in D', by: 'Pachelbel · nhạc cổ điển', icon: '🎻' },
+  { id: 'bridal', name: 'Bridal Chorus (Here Comes the Bride)', by: 'Wagner · nhạc rước dâu', icon: '💒' },
+  { id: 'romance', name: 'Tình khúc ngọt ngào', by: 'Piano lãng mạn · sáng tác riêng', icon: '🎹' },
+  { id: 'waltz', name: 'Điệu valse hạnh phúc', by: 'Nhịp 3/4 · sáng tác riêng', icon: '💃' },
+  { id: 'festive', name: 'Ngày vui', by: 'Rộn ràng · sáng tác riêng', icon: '🎉' },
+] as const;
+export type MusicId = (typeof MUSIC_TRACKS)[number]['id'] | 'off' | 'url';
+export const MUSIC_IDS: readonly string[] = [...MUSIC_TRACKS.map((t) => t.id), 'off', 'url'];
 
 export interface WeddingInfo {
   groom: string;
@@ -39,6 +58,10 @@ export interface WeddingInfo {
   welcome: string;
   floor: FloorId;
   accent: number;
+  /** nhạc nền đang phát cho cả sảnh */
+  music?: MusicId;
+  /** link file nhạc (khi music = 'url') */
+  musicUrl?: string;
 }
 
 export interface Wish {
@@ -81,7 +104,7 @@ export const CEREMONIES: { kind: CeremonyKind; name: string; icon: string; text:
   { kind: 'confetti', name: 'Pháo giấy', icon: '🎉', text: 'Bắn pháo giấy mừng hạnh phúc!' },
 ];
 
-export const EMOTES = ['👏', '❤️', '😂', '🎉', '🥂', '😭', '😍', '🙏'];
+export const EMOTES = ['👏', '❤️', '😂', '🎉', '🥂', '😭', '😍', '🙏', '🔔', '🎤', '💃', '🌹'];
 
 export type ErrorCode = 'not_found' | 'exists' | 'bad_key' | 'full' | 'replaced' | 'bad_request';
 
@@ -112,6 +135,7 @@ export type ClientMsg =
   | { t: 'itemColor'; id: number; color: number }
   | { t: 'info'; info: Partial<WeddingInfo> }
   | { t: 'resetLayout' }
+  | { t: 'fx'; kind: 'firework'; x: number; y: number }
   | { t: 'ping' };
 
 // ───────── Server → Client ─────────
@@ -137,4 +161,5 @@ export type ServerMsg =
   | { t: 'wish'; wish: Wish }
   | { t: 'delWish'; id: number }
   | { t: 'ceremony'; kind: CeremonyKind; by: string; target?: string }
+  | { t: 'fx'; kind: 'firework'; x: number; y: number; by: string }
   | { t: 'error'; code: ErrorCode; message: string };
