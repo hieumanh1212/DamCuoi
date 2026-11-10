@@ -32,7 +32,7 @@ const WORLD_W = HALL_W * TILE;
 const WORLD_H = HALL_H * TILE;
 const CHAIR_DIR = [0, 1, 2, 3]; // rot của ghế → hướng ngồi
 /** Nhân vật được vẽ to hơn ô một chút cho dễ nhìn */
-const CHAR_SCALE = 1.35;
+const CHAR_SCALE = 1.15;
 
 export class Scene {
   private ctx: CanvasRenderingContext2D;
@@ -44,7 +44,7 @@ export class Scene {
 
   private keys = new Set<string>();
   private path: [number, number][] | null = null;
-  private goal: { kind: 'sit'; item: Item } | { kind: 'interact'; item: Item; interact: Exclude<Interact, 'sit'> } | null = null;
+  private goal: { kind: 'sit'; item: Item; tx: number; ty: number } | { kind: 'interact'; item: Item; interact: Exclude<Interact, 'sit'> } | null = null;
   private marker: { x: number; y: number; at: number } | null = null;
   private lastSent = { x: 0, y: 0, d: 0, s: false, at: 0 };
 
@@ -59,7 +59,7 @@ export class Scene {
 
   // trang trí
   private editing = false;
-  private placing: { type: ItemType; rot: number } | null = null;
+  private placing: { type: ItemType; rot: number; color: number } | null = null;
   private selectedId: number | null = null;
   private drag: { id: number; dx: number; dy: number; x: number; y: number; moved: boolean } | null = null;
   private pan: { sx: number; sy: number; cx: number; cy: number } | null = null;
@@ -202,9 +202,18 @@ export class Scene {
     if (!on) this.select(null);
   }
 
-  setPlacing(type: ItemType | null) {
-    this.placing = type ? { type, rot: 0 } : null;
+  setPlacing(type: ItemType | null, color = 0) {
+    this.placing = type ? { type, rot: 0, color } : null;
     if (type) this.select(null);
+  }
+
+  /** Đổi màu: món đang đặt hoặc món đang chọn */
+  setColor(color: number) {
+    if (this.placing) {
+      this.placing.color = color;
+      return;
+    }
+    if (this.selectedId !== null) this.cb.send({ t: 'itemColor', id: this.selectedId, color });
   }
 
   rotate() {
@@ -321,7 +330,7 @@ export class Scene {
     if (this.editing) {
       this.canvas.setPointerCapture(e.pointerId);
       if (this.placing) {
-        const it = { type: this.placing.type, rot: this.placing.rot, ...this.anchor(this.placing.type, this.placing.rot, tx, ty) };
+        const it = { type: this.placing.type, rot: this.placing.rot, color: this.placing.color, ...this.anchor(this.placing.type, this.placing.rot, tx, ty) };
         if (canPlace(this.items, it)) this.cb.send({ t: 'place', item: it });
         return;
       }
@@ -389,8 +398,8 @@ export class Scene {
 
     let dest: [number, number] | null = null;
     if (obj && def?.interact === 'sit') {
-      dest = [obj.x, obj.y];
-      this.goal = { kind: 'sit', item: obj };
+      dest = [tx, ty]; // sofa dài: ngồi đúng ô được chạm
+      this.goal = { kind: 'sit', item: obj, tx, ty };
     } else if (obj && def?.interact && def.interact !== 'sit') {
       // đi tới ô trống gần món đồ nhất
       let best: [number, number] | null = null;
@@ -423,8 +432,8 @@ export class Scene {
     this.path = null;
     if (!goal) return;
     if (goal.kind === 'sit') {
-      me.state.x = goal.item.x + 0.5;
-      me.state.y = goal.item.y + 0.5;
+      me.state.x = goal.tx + 0.5;
+      me.state.y = goal.ty + 0.5;
       me.state.d = CHAIR_DIR[goal.item.rot] ?? 0;
       me.state.s = true;
     } else {
@@ -600,7 +609,7 @@ export class Scene {
       if (a.bubble) {
         const left = a.bubble.until - now;
         if (left <= 0) a.bubble = null;
-        else drawBubble(ctx, px, py - 14, a.bubble.text, Math.min(1, left / 400));
+        else drawBubble(ctx, px, py - 6, a.bubble.text, Math.min(1, left / 400));
       }
       a.emotes = a.emotes.filter((e) => now - e.start < 2200);
       a.emotes.forEach((e, i) => {
@@ -642,12 +651,12 @@ export class Scene {
       outline(sel.x, sel.y, s.w, s.h, '#6c5ce7');
     }
     // bóng mờ khi đặt / kéo
-    let ghost: (Pick<Item, 'type' | 'rot' | 'x' | 'y'> & { ignore?: number }) | null = null;
+    let ghost: (Pick<Item, 'type' | 'rot' | 'x' | 'y' | 'color'> & { ignore?: number }) | null = null;
     if (this.placing && this.hover) {
-      ghost = { type: this.placing.type, rot: this.placing.rot, ...this.anchor(this.placing.type, this.placing.rot, this.hover.x, this.hover.y) };
+      ghost = { type: this.placing.type, rot: this.placing.rot, color: this.placing.color, ...this.anchor(this.placing.type, this.placing.rot, this.hover.x, this.hover.y) };
     } else if (this.drag?.moved) {
       const it = this.items.find((i) => i.id === this.drag!.id);
-      if (it) ghost = { type: it.type, rot: it.rot, x: this.drag.x, y: this.drag.y, ignore: it.id };
+      if (it) ghost = { type: it.type, rot: it.rot, color: it.color, x: this.drag.x, y: this.drag.y, ignore: it.id };
     }
     if (ghost) {
       const ok = canPlace(this.items, ghost, ghost.ignore);

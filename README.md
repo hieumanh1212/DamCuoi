@@ -10,14 +10,15 @@ Tiệc cưới ảo nhiều người chơi trên trình duyệt. Cô dâu chú r
 
 **Cô dâu & chú rể**
 - Tạo đám cưới: điền tên hai người, ngày cưới. Sảnh tiệc mẫu được dựng sẵn, gồm sân khấu, phông chữ Hỷ, 12 bàn tiệc, thảm đỏ, cổng hoa, hòm mừng cưới, sổ lưu bút và khung chụp ảnh.
-- **Trang trí:** kéo thả 20 loại đồ (bàn tròn, bàn dài, ghế, phông cưới, bánh cưới, tháp ly, cổng hoa, đèn lồng, bóng bay, chữ Song Hỷ...), xoay và xóa đồ. Đổi sàn (đá trắng, gỗ, hồng pastel, đỏ truyền thống, sân cỏ), đổi màu chủ đạo, sửa tên, ngày cưới và lời chào khách.
+- **Trang trí:** kéo thả **36 loại đồ** (bàn tròn, sofa, bàn buffet, quầy nước, phông cưới, bánh cưới, tháp ly, piano, chữ LOVE neon, cổng hoa, cột hoa, đèn lồng, nến, gấu bông, thiên nga, đài phun nước, sàn nhảy LED, bảng Welcome, chữ Song Hỷ...), xoay và xóa đồ. Nhiều món **đổi màu được** (14 màu: khăn bàn, đệm ghế, bóng bay, thảm...).
+- **9 kiểu sàn** (đá trắng, gỗ, hồng pastel, đỏ truyền thống, sân cỏ, vàng sang trọng, đêm đầy sao, tím oải hương, bãi biển) và 10 màu chủ đạo; sửa tên, ngày cưới, lời chào khách.
 - **Nghi lễ:** cắt bánh, nâng ly, trao tình yêu, tung hoa cưới (bó hoa bay tới một khách ngẫu nhiên), bắn pháo giấy. Mọi khách thấy hiệu ứng cùng lúc.
 - **Link quản lý** (bí mật) để nửa kia cùng trang trí và tổ chức nghi lễ. Cô dâu chú rể có thể xóa lời chúc không phù hợp.
 
 **Khách mời**
-- Tạo nhân vật: màu da, 6 kiểu tóc, màu tóc, trang phục (sơ mi, áo dài, váy, vest) và màu áo. Cô dâu tự động mặc váy cưới có voan, chú rể mặc vest và nơ đỏ.
+- Nhân vật **chibi có khối** (đầu to, mắt long lanh, tóc bóng). Tự chọn màu da, 6 kiểu tóc, màu tóc, trang phục (sơ mi, áo dài, váy, vest) và màu áo. Cô dâu tự động mặc váy cưới xòe có voan và vương miện, chú rể mặc vest và nơ đỏ.
 - Di chuyển bằng **WASD/mũi tên**, hoặc **chạm vào chỗ muốn đến** để nhân vật tự tìm đường. Chạm vào ghế để ngồi.
-- Chat có bong bóng hiện trên đầu nhân vật, và 8 biểu cảm.
+- Chat có bong bóng hiện trên đầu nhân vật, và 8 biểu cảm. **Khung trò chuyện đóng/mở được**, có đếm tin chưa đọc; trên điện thoại khung chat là ngăn kéo vuốt lên.
 - **Mừng cưới:** chọn màu phong bì, viết lời chúc, bỏ vào hòm. Lời chúc được lưu trong **sổ lưu bút**. Game không dùng tiền thật.
 - **Chụp ảnh** sảnh tiệc thành file PNG.
 - Chơi được trên điện thoại.

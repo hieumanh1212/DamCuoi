@@ -169,6 +169,7 @@ export class Wedding {
       case 'place': if (couple) this.place(msg.item); return;
       case 'moveItem': if (couple) this.moveItem(msg.id, msg.x, msg.y, msg.rot); return;
       case 'remove': if (couple) this.removeItem(msg.id); return;
+      case 'itemColor': if (couple) this.recolor(msg.id, msg.color); return;
       case 'info': if (couple) this.updateInfo(msg.info); return;
       case 'resetLayout': if (couple) this.resetLayout(); return;
     }
@@ -282,9 +283,19 @@ export class Wedding {
     const s = this.saved!;
     const cur = s.items.find((i) => i.id === id);
     if (!cur) return;
-    const it = sanitizeItem({ type: cur.type, x, y, rot });
+    const it = sanitizeItem({ type: cur.type, x, y, rot, color: cur.color });
     if (!it || !canPlace(s.items, it, cur.id)) return;
     Object.assign(cur, it);
+    this.itemsChanged();
+  }
+
+  private recolor(id: unknown, color: unknown) {
+    const cur = this.saved!.items.find((i) => i.id === id);
+    if (!cur) return;
+    const it = sanitizeItem({ ...cur, color });
+    if (!it) return;
+    if (it.color) cur.color = it.color;
+    else delete cur.color;
     this.itemsChanged();
   }
 

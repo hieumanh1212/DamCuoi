@@ -8,7 +8,7 @@ export function Modal({ title, onClose, children, wide }: { title: string; onClo
     <div className="modal-bg" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-label={title}>
         <header>
-          <h2>{title}</h2>
+          {title ? <h2>{title}</h2> : <span />}
           <button className="x" onClick={onClose} aria-label="Đóng">✕</button>
         </header>
         <div className="modal-body">{children}</div>

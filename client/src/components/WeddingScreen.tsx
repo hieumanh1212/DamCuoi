@@ -32,20 +32,33 @@ interface LogEntry {
   name?: string;
   text: string;
   notice?: boolean;
+  at: number;
 }
 
 type Panel = 'gift' | 'guestbook' | 'invite' | 'character' | null;
 let seq = 0;
 
+const CHAT_KEY = 'dam-cuoi:chatOpen';
+const initialChatOpen = () => {
+  try {
+    const v = localStorage.getItem(CHAT_KEY);
+    return v === null ? window.innerWidth > 820 : v === '1';
+  } catch {
+    return window.innerWidth > 820;
+  }
+};
+
 export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTaken }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const logRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<Scene | null>(null);
   const connRef = useRef<Connection | null>(null);
   const createdRef = useRef(false);
+  const welcomedRef = useRef(false);
   const profileRef = useRef(profile);
   profileRef.current = profile;
   const peopleRef = useRef(new Set<string>());
-  const createdWelcomeShown = useRef(false);
+  const chatOpenRef = useRef(false);
 
   const [status, setStatus] = useState<Status>('connecting');
   const [error, setError] = useState<string | null>(null);
@@ -58,23 +71,48 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
   const [panel, setPanel] = useState<Panel>(null);
   const [editing, setEditing] = useState(false);
   const [placing, setPlacingState] = useState<ItemType | null>(null);
+  const [placingColor, setPlacingColor] = useState(0);
   const [selected, setSelected] = useState<Item | null>(null);
   const [ceremonyBar, setCeremonyBar] = useState(false);
   const [welcome, setWelcome] = useState(false);
   const [chatText, setChatText] = useState('');
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpenState] = useState(initialChatOpen);
+  const [unread, setUnread] = useState(0);
+  const [emoteOpen, setEmoteOpen] = useState(false);
   const [muted, setMutedState] = useState(isMuted());
   const [draft, setDraft] = useState<Profile>(profile);
+  const [, tick] = useState(0);
 
+  chatOpenRef.current = chatOpen;
   const send = (m: Parameters<Connection['send']>[0]) => connRef.current?.send(m);
   const couple = role !== 'guest';
 
+  const setChatOpen = (v: boolean) => {
+    setChatOpenState(v);
+    if (v) setUnread(0);
+    try { localStorage.setItem(CHAT_KEY, v ? '1' : '0'); } catch { /* bỏ qua */ }
+  };
+
   const toast = (text: string) => {
     const id = ++seq;
-    setToasts((t) => [...t.slice(-3), { id, text }]);
+    setToasts((t) => [...t.slice(-2), { id, text }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4500);
   };
-  const addLog = (e: Omit<LogEntry, 'id'>) => setLog((l) => [...l.slice(-150), { ...e, id: ++seq }]);
+  const addLog = (e: Omit<LogEntry, 'id' | 'at'>) => {
+    setLog((l) => [...l.slice(-150), { ...e, id: ++seq, at: Date.now() }]);
+    if (!chatOpenRef.current && !e.notice) setUnread((u) => u + 1);
+  };
+
+  // làm mới nhật ký nổi (tin nhắn tự mờ dần)
+  useEffect(() => {
+    const id = setInterval(() => tick((x) => x + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const el = logRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [log, chatOpen]);
 
   useEffect(() => {
     const scene = new Scene(canvasRef.current!, {
@@ -108,8 +146,8 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
             if (key) saveAccess(m.code, { key, role: m.role });
           }
           if (session.create) createdRef.current = true;
-          if (!createdWelcomeShown.current) {
-            createdWelcomeShown.current = true;
+          if (!welcomedRef.current) {
+            welcomedRef.current = true;
             if (session.create) setPanel('invite');
             else setWelcome(true);
             sfx.chime();
@@ -196,7 +234,12 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
 
   const setPlacing = (t: ItemType | null) => {
     setPlacingState(t);
-    sceneRef.current?.setPlacing(t);
+    sceneRef.current?.setPlacing(t, placingColor);
+  };
+
+  const pickColor = (c: number) => {
+    if (placing) setPlacingColor(c);
+    sceneRef.current?.setColor(c);
   };
 
   const toggleEdit = () => {
@@ -226,38 +269,52 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
     return (
       <div className="center-screen">
         <div className="card narrow">
-          <h2>😕 {error}</h2>
+          <div className="big-emoji">😕</div>
+          <h2>{error}</h2>
           <button className="btn primary" onClick={onLeave}>Về trang chủ</button>
         </div>
       </div>
     );
   }
 
+  const now = Date.now();
+  const recent = log.filter((e) => now - e.at < 9000).slice(-3);
+  const logList = (
+    <>
+      {log.map((e) => (
+        <div key={e.id} className={`line ${e.notice ? 'n' : ''}`}>{e.name && <b>{e.name}</b>}<span>{e.text}</span></div>
+      ))}
+      {log.length === 0 && <p className="muted small empty-chat">Chưa có tin nhắn. Chào mọi người một tiếng nhé! 👋</p>}
+    </>
+  );
+
   return (
-    <div className={`wed ${editing ? 'editing' : ''}`}>
+    <div className={`wed ${editing ? 'editing' : ''} ${chatOpen ? 'chat-open' : 'chat-closed'}`}>
       <header className="wed-top">
         <button className="brand" onClick={() => confirm('Rời khỏi đám cưới?') && onLeave()} title="Rời tiệc">💍</button>
         <div className="title">
           {info ? (
             <>
-              <b>{info.groom} <span className="hearts">❤</span> {info.bride}</b>
-              {info.date && <span className="date">{formatDate(info.date)}</span>}
+              <b className="names">{info.groom} <span className="amp">&</span> {info.bride}</b>
+              <span className="sub">
+                {info.date && <>{formatDate(info.date)} · </>}
+                <span className="online">● {count} người đang dự</span>
+              </span>
             </>
           ) : (
             <span className="muted">Đang vào sảnh tiệc…</span>
           )}
         </div>
-        <span className="online" title="Đang có mặt">👥 {count}</span>
-        <div className="top-actions">
-          {couple && <button className={`tb ${editing ? 'on' : ''}`} onClick={toggleEdit}>🛠 <span>Trang trí</span></button>}
-          {couple && <button className={`tb ${ceremonyBar ? 'on' : ''}`} onClick={() => setCeremonyBar((v) => !v)}>🎊 <span>Nghi lễ</span></button>}
-          <button className="tb" onClick={() => setPanel('gift')}>💌 <span>Mừng cưới</span></button>
-          <button className="tb" onClick={() => setPanel('guestbook')}>📖 <span>Lưu bút</span>{wishes.length > 0 && <i className="badge">{wishes.length}</i>}</button>
-          <button className="tb" onClick={() => setPanel('invite')}>🔗 <span>Mời khách</span></button>
-          <button className="tb" onClick={() => { setDraft(profile); setPanel('character'); }}>👕 <span>Nhân vật</span></button>
-          <button className="tb" onClick={takePhoto}>📸 <span>Chụp ảnh</span></button>
-          <button className="tb icon" onClick={() => { setMuted(!muted); setMutedState(!muted); }} title="Âm thanh">{muted ? '🔇' : '🔊'}</button>
-        </div>
+        <nav className="top-actions">
+          {couple && <button className={`tb accent ${editing ? "on" : ""}`} onClick={toggleEdit} title="Trang trí"><i>🛠</i><span>Trang trí</span></button>}
+          {couple && <button className={`tb accent ${ceremonyBar ? 'on' : ''}`} onClick={() => setCeremonyBar((v) => !v)} title="Nghi lễ"><i>🎊</i><span>Nghi lễ</span></button>}
+          <button className="tb" onClick={() => setPanel('gift')} title="Mừng cưới"><i>💌</i><span>Mừng cưới</span></button>
+          <button className="tb" onClick={() => setPanel('guestbook')} title="Lưu bút"><i>📖</i><span>Lưu bút</span>{wishes.length > 0 && <em className="badge">{wishes.length}</em>}</button>
+          <button className="tb" onClick={() => setPanel('invite')} title="Mời khách"><i>🔗</i><span>Mời khách</span></button>
+          <button className="tb" onClick={() => { setDraft(profile); setPanel('character'); }} title="Nhân vật"><i>👕</i><span>Nhân vật</span></button>
+          <button className="tb" onClick={takePhoto} title="Chụp ảnh"><i>📸</i><span>Chụp ảnh</span></button>
+          <button className="tb icon" onClick={() => { setMuted(!muted); setMutedState(!muted); }} title="Âm thanh"><i>{muted ? '🔇' : '🔊'}</i></button>
+        </nav>
       </header>
 
       <div className="wed-body">
@@ -265,11 +322,26 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
           <canvas ref={canvasRef} className="world" />
           {status !== 'open' && <div className="net">{status === 'connecting' ? 'Đang kết nối…' : 'Mất kết nối, đang thử lại…'}</div>}
           <div className="toasts">{toasts.map((t) => <div key={t.id} className="toast">{t.text}</div>)}</div>
-          <div className="zoom">
+
+          <div className="float-tools">
+            <button className={`chat-toggle ${chatOpen ? 'on' : ''}`} onClick={() => setChatOpen(!chatOpen)} title={chatOpen ? 'Ẩn trò chuyện' : 'Mở trò chuyện'}>
+              💬{!chatOpen && unread > 0 && <em className="badge">{unread > 99 ? '99+' : unread}</em>}
+            </button>
             <button onClick={() => zoom(1.2)} aria-label="Phóng to">＋</button>
             <button onClick={() => zoom(1 / 1.2)} aria-label="Thu nhỏ">－</button>
           </div>
-          {!editing && <div className="hint">🖱️ Chạm/nhấp để đi · ⌨️ WASD/mũi tên · Chạm ghế để ngồi · Chạm 🎁 để mừng cưới</div>}
+
+          {!editing && !chatOpen && recent.length > 0 && (
+            <div className="mini-log" onClick={() => setChatOpen(true)}>
+              {recent.map((e) => (
+                <div key={e.id} className={e.notice ? 'n' : ''} style={{ opacity: Math.min(1, (9000 - (now - e.at)) / 2000) }}>
+                  {e.name && <b>{e.name}: </b>}{e.text}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!editing && <div className="hint">Chạm để đi · WASD/mũi tên · Chạm ghế để ngồi · Chạm 🎁 để mừng cưới</div>}
 
           {ceremonyBar && couple && (
             <div className="ceremony-bar">
@@ -281,19 +353,14 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
             </div>
           )}
 
-          {/* nhật ký chat nổi (điện thoại) */}
-          <div className={`float-log ${chatOpen ? 'open' : ''}`} onClick={() => setChatOpen((v) => !v)}>
-            {log.slice(chatOpen ? -40 : -4).map((e) => (
-              <div key={e.id} className={e.notice ? 'n' : ''}>{e.name && <b>{e.name}: </b>}{e.text}</div>
-            ))}
-          </div>
-
           {editing && info && (
             <EditPanel
               info={info}
               placing={placing}
+              placingColor={placingColor}
               selected={selected}
               onPlacing={setPlacing}
+              onColor={pickColor}
               onRotate={() => sceneRef.current?.rotate()}
               onDelete={() => sceneRef.current?.deleteSelected()}
               onInfo={(patch) => send({ t: 'info', info: patch })}
@@ -303,20 +370,23 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
           )}
         </div>
 
-        <aside className="side">
-          <h3>💬 Trò chuyện</h3>
-          <div className="log">
-            {log.map((e) => (
-              <div key={e.id} className={e.notice ? 'n' : ''}>{e.name && <b>{e.name}: </b>}{e.text}</div>
-            ))}
-            {log.length === 0 && <p className="muted small">Chào mọi người một tiếng nhé! 👋</p>}
-          </div>
+        <aside className="side" aria-hidden={!chatOpen}>
+          <header>
+            <h3>💬 Trò chuyện</h3>
+            <button className="x" onClick={() => setChatOpen(false)} aria-label="Ẩn trò chuyện">✕</button>
+          </header>
+          <div className="log" ref={logRef}>{logList}</div>
         </aside>
       </div>
 
       <footer className="wed-bottom">
-        <div className="emotes">
-          {EMOTES.map((e) => <button key={e} onClick={() => send({ t: 'emote', e })}>{e}</button>)}
+        <div className="emote-wrap">
+          <button className={`emote-btn ${emoteOpen ? 'on' : ''}`} onClick={() => setEmoteOpen((v) => !v)} aria-label="Biểu cảm">😊</button>
+          {emoteOpen && (
+            <div className="emote-pop">
+              {EMOTES.map((e) => <button key={e} onClick={() => { send({ t: 'emote', e }); setEmoteOpen(false); }}>{e}</button>)}
+            </div>
+          )}
         </div>
         <form
           className="chat-form"
@@ -328,21 +398,29 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
             (document.activeElement as HTMLElement | null)?.blur?.();
           }}
         >
-          <input value={chatText} maxLength={LIMITS.chatLength} placeholder="Nói gì đó… (Enter để gửi)" onChange={(e) => setChatText(e.target.value)} enterKeyHint="send" />
-          <button className="btn primary" type="submit">Gửi</button>
+          <input value={chatText} maxLength={LIMITS.chatLength} placeholder="Nói gì đó với mọi người…" onChange={(e) => setChatText(e.target.value)} enterKeyHint="send" />
+          <button className="send" type="submit" aria-label="Gửi">➤</button>
         </form>
+        <div className="quick-emotes">
+          {EMOTES.slice(0, 4).map((e) => <button key={e} onClick={() => send({ t: 'emote', e })}>{e}</button>)}
+        </div>
       </footer>
 
       {welcome && info && (
-        <Modal title={`💒 Đám cưới ${info.groom} & ${info.bride}`} onClose={() => setWelcome(false)}>
-          <p className="welcome-msg">“{info.welcome}”</p>
-          {info.date && <p className="muted">Ngày cưới: <b>{formatDate(info.date)}</b></p>}
-          <ul className="howto">
-            <li>🚶 Chạm vào sảnh để đi lại, chạm vào ghế để ngồi.</li>
-            <li>🎁 Ghé <b>hòm mừng cưới</b> để gửi phong bì kèm lời chúc.</li>
-            <li>💬 Chat và thả biểu cảm ở thanh phía dưới.</li>
-          </ul>
-          <button className="btn primary wide" onClick={() => setWelcome(false)}>Vào tiệc thôi! 🎉</button>
+        <Modal title="" onClose={() => setWelcome(false)}>
+          <div className="welcome-card">
+            <div className="welcome-rings">💍</div>
+            <p className="eyebrow">Trân trọng kính mời bạn đến dự</p>
+            <h2 className="script">{info.groom} & {info.bride}</h2>
+            {info.date && <p className="date-pill">{formatDate(info.date)}</p>}
+            <p className="welcome-msg">“{info.welcome}”</p>
+            <ul className="howto">
+              <li><span>🚶</span><div>Chạm vào sảnh để đi lại, chạm vào ghế để ngồi</div></li>
+              <li><span>🎁</span><div>Ghé <b>hòm mừng cưới</b> để gửi phong bì kèm lời chúc</div></li>
+              <li><span>💬</span><div>Chat và thả biểu cảm ở thanh bên dưới</div></li>
+            </ul>
+            <button className="btn primary big wide" onClick={() => setWelcome(false)}>Vào tiệc thôi! 🎉</button>
+          </div>
         </Modal>
       )}
       {panel === 'gift' && info && (

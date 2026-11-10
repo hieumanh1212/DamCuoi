@@ -22,10 +22,14 @@ export const FLOORS = [
   { id: 'pink', name: 'Hồng pastel' },
   { id: 'red', name: 'Đỏ truyền thống' },
   { id: 'garden', name: 'Sân cỏ' },
+  { id: 'gold', name: 'Vàng sang trọng' },
+  { id: 'navy', name: 'Đêm đầy sao' },
+  { id: 'lavender', name: 'Tím oải hương' },
+  { id: 'beach', name: 'Bãi biển' },
 ] as const;
 export type FloorId = (typeof FLOORS)[number]['id'];
 
-export const ACCENTS = ['#e53950', '#ff7aa8', '#c9a227', '#8e5bd6', '#2e9e8f', '#1e88e5'];
+export const ACCENTS = ['#e53950', '#ff7aa8', '#c9a227', '#8e5bd6', '#2e9e8f', '#1e88e5', '#ef6c00', '#5d4037', '#ad1457', '#00838f'];
 
 export interface WeddingInfo {
   groom: string;
@@ -105,6 +109,7 @@ export type ClientMsg =
   | { t: 'place'; item: Omit<Item, 'id'> }
   | { t: 'moveItem'; id: number; x: number; y: number; rot: number }
   | { t: 'remove'; id: number }
+  | { t: 'itemColor'; id: number; color: number }
   | { t: 'info'; info: Partial<WeddingInfo> }
   | { t: 'resetLayout' }
   | { t: 'ping' };

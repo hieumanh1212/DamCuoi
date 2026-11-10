@@ -127,6 +127,23 @@ describe('Đám cưới', () => {
     expect(last('g1', 'items')!.items.length).toBe(before);
   });
 
+  it('đổi màu đồ trang trí; di chuyển vẫn giữ màu; đồ không đổi màu được thì bỏ qua', async () => {
+    const { w, last } = await created();
+    const items = last('groom', 'welcome')!.items;
+    const table = items.find((i) => i.type === 'table_round')!;
+    w.handle('groom', { t: 'itemColor', id: table.id, color: 3 });
+    expect(last('groom', 'items')!.items.find((i) => i.id === table.id)?.color).toBe(3);
+    w.handle('groom', { t: 'moveItem', id: table.id, x: table.x, y: table.y, rot: 0 });
+    expect(last('groom', 'items')!.items.find((i) => i.id === table.id)?.color).toBe(3);
+    w.handle('groom', { t: 'itemColor', id: table.id, color: 0 });
+    expect(last('groom', 'items')!.items.find((i) => i.id === table.id)?.color).toBeUndefined();
+    const piano = { type: 'piano' as const, x: 2, y: 22, rot: 0, color: 4 };
+    w.handle('groom', { t: 'place', item: piano });
+    const placed = last('groom', 'items')!.items.at(-1)!;
+    expect(placed.type).toBe('piano');
+    expect(placed.color).toBeUndefined();
+  });
+
   it('đổi thông tin & giao diện', async () => {
     const { w, last } = await created();
     w.handle('groom', { t: 'info', info: { welcome: 'Chào mừng!', floor: 'wood', accent: 2, bride: '  Ngọc   Lan ' } });

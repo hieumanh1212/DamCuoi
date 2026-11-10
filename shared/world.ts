@@ -10,9 +10,12 @@ export const DOOR = { x0: 16, x1: 19 };
 export const SPAWN = { x: 17.5, y: HALL_H - 1.6 };
 
 export type ItemType =
-  | 'table_round' | 'table_long' | 'chair' | 'backdrop' | 'arch' | 'cake' | 'champagne'
-  | 'giftbox' | 'guestbook' | 'photo' | 'flowers' | 'plant' | 'balloons' | 'lantern' | 'lamp'
-  | 'heart' | 'hy' | 'speaker' | 'carpet' | 'petals';
+  | 'table_round' | 'table_long' | 'chair' | 'sofa' | 'buffet' | 'drinks'
+  | 'backdrop' | 'arch' | 'cake' | 'champagne' | 'speaker' | 'mc' | 'piano' | 'dancefloor'
+  | 'flowers' | 'plant' | 'balloons' | 'lantern' | 'lamp' | 'heart' | 'hy' | 'candles' | 'teddy'
+  | 'giftpile' | 'love' | 'swan' | 'pillar' | 'welcome' | 'tree_lights' | 'fountain'
+  | 'carpet' | 'petals' | 'rug'
+  | 'giftbox' | 'guestbook' | 'photo';
 
 export type Layer = 'floor' | 'object';
 export type Interact = 'gift' | 'guestbook' | 'photo' | 'sit';
@@ -29,28 +32,52 @@ export interface ItemDef {
   interact?: Interact;
   /** xoay được (đổi hướng/đổi chiều dài) */
   rotatable?: boolean;
+  /** đổi màu được (khăn bàn, đệm ghế, bóng bay...) */
+  colorable?: boolean;
   /** nhóm trong danh mục trang trí */
-  group: 'Bàn ghế' | 'Sân khấu' | 'Trang trí' | 'Tiện ích';
+  group: 'Bàn ghế' | 'Sân khấu' | 'Trang trí' | 'Sàn & thảm' | 'Tiện ích';
 }
 
+/** Bảng màu cho đồ trang trí. Màu 0 = theo màu chủ đạo của đám cưới */
+export const ITEM_COLORS = [
+  'accent', '#e53950', '#ff7aa8', '#ffc1d3', '#c9a227', '#ffffff', '#b39ddb',
+  '#7e57c2', '#5c6bc0', '#4fc3f7', '#26a69a', '#81c784', '#ffb74d', '#455a64',
+];
+
 export const CATALOG: ItemDef[] = [
-  { type: 'table_round', name: 'Bàn tròn', icon: '⚪', w: 2, h: 2, layer: 'object', solid: true, group: 'Bàn ghế' },
-  { type: 'table_long', name: 'Bàn dài', icon: '▭', w: 3, h: 1, layer: 'object', solid: true, rotatable: true, group: 'Bàn ghế' },
-  { type: 'chair', name: 'Ghế', icon: '🪑', w: 1, h: 1, layer: 'object', solid: false, interact: 'sit', rotatable: true, group: 'Bàn ghế' },
+  { type: 'table_round', name: 'Bàn tròn', icon: '⚪', w: 2, h: 2, layer: 'object', solid: true, colorable: true, group: 'Bàn ghế' },
+  { type: 'table_long', name: 'Bàn dài', icon: '▭', w: 3, h: 1, layer: 'object', solid: true, rotatable: true, colorable: true, group: 'Bàn ghế' },
+  { type: 'chair', name: 'Ghế', icon: '🪑', w: 1, h: 1, layer: 'object', solid: false, interact: 'sit', rotatable: true, colorable: true, group: 'Bàn ghế' },
+  { type: 'sofa', name: 'Sofa đôi', icon: '🛋️', w: 2, h: 1, layer: 'object', solid: false, interact: 'sit', rotatable: true, colorable: true, group: 'Bàn ghế' },
+  { type: 'buffet', name: 'Bàn buffet', icon: '🍱', w: 3, h: 1, layer: 'object', solid: true, rotatable: true, colorable: true, group: 'Bàn ghế' },
+  { type: 'drinks', name: 'Quầy nước', icon: '🍹', w: 1, h: 1, layer: 'object', solid: true, group: 'Bàn ghế' },
   { type: 'backdrop', name: 'Phông cưới', icon: '🖼️', w: 6, h: 1, layer: 'object', solid: true, group: 'Sân khấu' },
-  { type: 'cake', name: 'Bánh cưới', icon: '🎂', w: 1, h: 1, layer: 'object', solid: true, group: 'Sân khấu' },
+  { type: 'cake', name: 'Bánh cưới', icon: '🎂', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Sân khấu' },
   { type: 'champagne', name: 'Tháp ly', icon: '🥂', w: 1, h: 1, layer: 'object', solid: true, group: 'Sân khấu' },
   { type: 'speaker', name: 'Loa', icon: '🔊', w: 1, h: 1, layer: 'object', solid: true, group: 'Sân khấu' },
-  { type: 'arch', name: 'Cổng hoa', icon: '🌸', w: 4, h: 1, layer: 'object', solid: false, group: 'Trang trí' },
-  { type: 'flowers', name: 'Chậu hoa', icon: '💐', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
+  { type: 'mc', name: 'Bục MC', icon: '🎤', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Sân khấu' },
+  { type: 'piano', name: 'Đàn piano', icon: '🎹', w: 2, h: 2, layer: 'object', solid: true, group: 'Sân khấu' },
+  { type: 'love', name: 'Chữ LOVE', icon: '💗', w: 2, h: 1, layer: 'object', solid: true, colorable: true, group: 'Sân khấu' },
+  { type: 'arch', name: 'Cổng hoa', icon: '🌸', w: 4, h: 1, layer: 'object', solid: false, colorable: true, group: 'Trang trí' },
+  { type: 'flowers', name: 'Chậu hoa', icon: '💐', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Trang trí' },
+  { type: 'pillar', name: 'Cột hoa', icon: '🏛️', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Trang trí' },
   { type: 'plant', name: 'Cây xanh', icon: '🪴', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
-  { type: 'balloons', name: 'Bóng bay', icon: '🎈', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
-  { type: 'lantern', name: 'Đèn lồng', icon: '🏮', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
+  { type: 'tree_lights', name: 'Cây đèn', icon: '🌳', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
+  { type: 'balloons', name: 'Bóng bay', icon: '🎈', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Trang trí' },
+  { type: 'lantern', name: 'Đèn lồng', icon: '🏮', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Trang trí' },
   { type: 'lamp', name: 'Cột đèn', icon: '💡', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
-  { type: 'heart', name: 'Biển trái tim', icon: '💖', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
+  { type: 'candles', name: 'Nến', icon: '🕯️', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
+  { type: 'heart', name: 'Biển trái tim', icon: '💖', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Trang trí' },
   { type: 'hy', name: 'Chữ Song Hỷ', icon: '囍', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
-  { type: 'carpet', name: 'Thảm đỏ', icon: '🟥', w: 1, h: 1, layer: 'floor', solid: false, group: 'Trang trí' },
-  { type: 'petals', name: 'Cánh hoa', icon: '🌺', w: 1, h: 1, layer: 'floor', solid: false, group: 'Trang trí' },
+  { type: 'teddy', name: 'Gấu bông', icon: '🧸', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
+  { type: 'giftpile', name: 'Chồng quà', icon: '🎀', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Trang trí' },
+  { type: 'swan', name: 'Thiên nga', icon: '🦢', w: 1, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
+  { type: 'fountain', name: 'Đài phun nước', icon: '⛲', w: 2, h: 2, layer: 'object', solid: true, group: 'Trang trí' },
+  { type: 'welcome', name: 'Bảng chào mừng', icon: '🪧', w: 2, h: 1, layer: 'object', solid: true, group: 'Trang trí' },
+  { type: 'carpet', name: 'Thảm đỏ', icon: '🟥', w: 1, h: 1, layer: 'floor', solid: false, colorable: true, group: 'Sàn & thảm' },
+  { type: 'rug', name: 'Thảm tròn', icon: '⭕', w: 2, h: 2, layer: 'floor', solid: false, colorable: true, group: 'Sàn & thảm' },
+  { type: 'dancefloor', name: 'Sàn nhảy LED', icon: '🪩', w: 2, h: 2, layer: 'floor', solid: false, group: 'Sàn & thảm' },
+  { type: 'petals', name: 'Cánh hoa', icon: '🌺', w: 1, h: 1, layer: 'floor', solid: false, colorable: true, group: 'Sàn & thảm' },
   { type: 'giftbox', name: 'Hòm mừng cưới', icon: '🎁', w: 1, h: 1, layer: 'object', solid: true, interact: 'gift', group: 'Tiện ích' },
   { type: 'guestbook', name: 'Sổ lưu bút', icon: '📖', w: 1, h: 1, layer: 'object', solid: true, interact: 'guestbook', group: 'Tiện ích' },
   { type: 'photo', name: 'Khung chụp ảnh', icon: '📸', w: 2, h: 1, layer: 'object', solid: true, interact: 'photo', group: 'Tiện ích' },
@@ -65,6 +92,8 @@ export interface Item {
   x: number;
   y: number;
   rot: number;
+  /** chỉ số trong ITEM_COLORS (0 / không có = theo màu chủ đạo) */
+  color?: number;
 }
 
 export const MAX_ITEMS = 600;
@@ -105,7 +134,11 @@ export function sanitizeItem(raw: any): Omit<Item, 'id'> | null {
   const y = Math.round(Number(raw.y));
   const rot = ((Math.round(Number(raw.rot)) % 4) + 4) % 4;
   if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(rot)) return null;
-  return { type: raw.type, x, y, rot: ITEM_DEFS[raw.type as ItemType].rotatable ? rot : 0 };
+  const def = ITEM_DEFS[raw.type as ItemType];
+  const color = Number(raw.color);
+  const out: Omit<Item, 'id'> = { type: raw.type, x, y, rot: def.rotatable ? rot : 0 };
+  if (def.colorable && Number.isInteger(color) && color > 0 && color < ITEM_COLORS.length) out.color = color;
+  return out;
 }
 
 // ───────── Va chạm & tìm đường ─────────
@@ -195,6 +228,20 @@ export function defaultLayout(): Item[] {
   add('lantern', 24, 1);
   add('balloons', 7, 5);
   add('balloons', 28, 5);
+  add('love', 17, 3);
+  add('candles', 12, 3);
+  add('candles', 23, 3);
+  add('pillar', 6, 3);
+  add('pillar', 29, 3);
+
+  // Buffet & quầy nước dọc hai bên tường, cây đèn ở góc
+  for (const bx of [1, HALL_W - 2]) {
+    add('buffet', bx, 9, 1);
+    add('buffet', bx, 14, 1);
+    add('drinks', bx, 19);
+  }
+  add('tree_lights', 2, 6);
+  add('tree_lights', HALL_W - 3, 6);
 
   // Thảm đỏ từ cửa lên sân khấu + cánh hoa hai bên
   for (let y = 6; y <= HALL_H - 2; y++) {
@@ -231,6 +278,7 @@ export function defaultLayout(): Item[] {
   add('lamp', 14, HALL_H - 2);
   add('lamp', 21, HALL_H - 2);
   add('heart', 4, HALL_H - 3);
+  add('welcome', 8, HALL_H - 4);
 
   return items.map((it, i) => ({ ...it, id: i + 1 }));
 }

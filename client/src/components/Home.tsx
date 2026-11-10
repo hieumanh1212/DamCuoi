@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { CODE_RE, LIMITS } from '../../../shared/protocol';
 import { loadAccess, myWeddings } from '../lib/identity';
+import { CharacterPreview } from './CharacterEditor';
+
+const GROOM = { skin: 1, hair: 'short', hairColor: 0, outfit: 'suit', color: 10 } as const;
+const BRIDE = { skin: 0, hair: 'long', hairColor: 1, outfit: 'dress', color: 9 } as const;
 
 interface Props {
   onCreate: (c: { groom: string; bride: string; date: string; role: 'groom' | 'bride' }) => void;
@@ -19,8 +23,13 @@ export function Home({ onCreate, onJoin }: Props) {
 
   return (
     <div className="home">
+      <div className="floaters" aria-hidden>{Array.from({ length: 14 }, (_, i) => <span key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 1.3) % 9}s`, fontSize: `${14 + (i % 4) * 6}px` }}>{i % 3 ? '❤' : '✿'}</span>)}</div>
       <header className="hero">
-        <div className="hero-rings">💍</div>
+        <div className="hero-couple">
+          <CharacterPreview look={GROOM} role="groom" size={120} dir={0} />
+          <span className="hero-heart">❤</span>
+          <CharacterPreview look={BRIDE} role="bride" size={120} dir={0} />
+        </div>
         <h1>Đám Cưới Online</h1>
         <p>Tổ chức tiệc cưới ảo — trang trí sảnh tiệc, mời bạn bè, cùng nhau chung vui dù ở bất cứ đâu.</p>
       </header>

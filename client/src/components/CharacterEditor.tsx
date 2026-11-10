@@ -14,7 +14,7 @@ interface Props {
 }
 
 /** Xem trước nhân vật đang bước đi */
-export function CharacterPreview({ look, role, size = 120 }: { look: Look; role: Role; size?: number }) {
+export function CharacterPreview({ look, role, size = 120, dir }: { look: Look; role: Role; size?: number; dir?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const lookRef = useRef(look);
   lookRef.current = look;
@@ -31,12 +31,12 @@ export function CharacterPreview({ look, role, size = 120 }: { look: Look; role:
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const k = (size / 48) * dpr;
       ctx.setTransform(k, 0, 0, k, 0, 0);
-      const d = [0, 3, 2, 1][Math.floor(t / 1600) % 4];
-      drawCharacter(ctx, 24, 40, lookRef.current, role, { d, walk: t / 80, sitting: false });
+      const d = dir ?? [0, 3, 2, 1][Math.floor(t / 1600) % 4];
+      drawCharacter(ctx, 24, 42, lookRef.current, role, { d, walk: dir === undefined ? t / 80 : -1, sitting: false });
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [role, size]);
+  }, [role, size, dir]);
   return <canvas ref={ref} style={{ width: size, height: size }} className="char-preview" />;
 }
 
