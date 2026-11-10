@@ -46,6 +46,9 @@ export class Wedding {
   private dirty = new Set<string>();
   private lastCeremony = 0;
   private lastFx = 0;
+  private party = false;
+  private lastParty = 0;
+  private partyTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private store: Store,
@@ -129,7 +132,7 @@ export class Wedding {
 
     const { info, items } = this.saved;
     this.transport.send(id, {
-      t: 'welcome', you: id, role, code, info, items, wishes: this.wishes,
+      t: 'welcome', you: id, role, code, info, items, wishes: this.wishes, party: this.party,
       players: [...this.players.values()].map(this.publicState),
     });
     this.broadcast({ t: 'join', p: this.publicState(p) }, id);
@@ -175,6 +178,7 @@ export class Wedding {
       case 'info': if (couple) this.updateInfo(msg.info); return;
       case 'resetLayout': if (couple) this.resetLayout(); return;
       case 'fx': return this.fx(p, msg);
+      case 'party': return this.setParty(p, msg.on);
     }
   }
 
@@ -281,6 +285,27 @@ export class Wedding {
     if (!hasLauncher) return;
     this.lastFx = now;
     this.broadcast({ t: 'fx', kind: 'firework', x, y, by: p.id });
+  }
+
+  /** Chế độ Bar: ai cũng bật được từ bàn DJ; cô dâu chú rể bật được cả khi chưa có bàn DJ */
+  private setParty(p: Player, on: unknown) {
+    const want = !!on;
+    const now = Date.now();
+    if (want === this.party || now - this.lastParty < LIMITS.partyCooldown) return;
+    if (p.role === 'guest' && !this.saved!.items.some((i) => i.type === 'dj')) return;
+    this.lastParty = now;
+    this.party = want;
+    if (this.partyTimer) clearTimeout(this.partyTimer);
+    this.partyTimer = want
+      ? setTimeout(() => {
+          this.party = false;
+          this.partyTimer = null;
+          this.broadcast({ t: 'party', on: false, by: '' });
+          this.broadcast({ t: 'notice', text: '🌙 Chế độ Bar đã tự tắt, quay lại tiệc cưới nhé!' });
+        }, LIMITS.partyMaxMs)
+      : null;
+    this.broadcast({ t: 'party', on: want, by: p.id });
+    this.broadcast({ t: 'notice', text: want ? `🪩 ${p.name} đã bật chế độ Bar — quẩy lên nào!` : `🌙 ${p.name} đã tắt chế độ Bar` });
   }
 
   // ───────── Trang trí (chỉ cô dâu chú rể) ─────────

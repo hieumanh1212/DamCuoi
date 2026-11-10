@@ -87,6 +87,9 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
   const [muted, setMutedState] = useState(isMuted());
   const [draft, setDraft] = useState<Profile>(profile);
   const [musicOpen, setMusicOpen] = useState(false);
+  const [party, setPartyState] = useState(false);
+  const partyRef = useRef(false);
+  partyRef.current = party;
   const [musicOn, setMusicOn] = useState(() => lsGet('dam-cuoi:musicOn', '1') === '1');
   const [volume, setVolume] = useState(() => Number(lsGet('dam-cuoi:volume', '0.6')));
   const [fullscreen, setFullscreen] = useState(false);
@@ -118,8 +121,10 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
   // nhạc nền: phát bài cô dâu chú rể chọn
   useEffect(() => {
     if (!info) return;
-    music.play(musicOn ? info.music ?? 'canon' : 'off', info.musicUrl ?? '');
-  }, [info?.music, info?.musicUrl, musicOn, info]);
+    if (!musicOn) music.play('off');
+    else if (party) music.play('club');
+    else music.play(info.music ?? 'canon', info.musicUrl ?? '');
+  }, [info?.music, info?.musicUrl, musicOn, info, party]);
   useEffect(() => music.setVolume(volume), [volume]);
   useEffect(() => () => music.play('off'), []);
   useEffect(() => {
@@ -186,6 +191,8 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
             return connRef.current?.send({ t: 'emote', e: '🎤' });
           case 'firework':
             return connRef.current?.send({ t: 'fx', kind: 'firework', x: item.x + 0.5, y: item.y + 0.5 });
+          case 'party':
+            return connRef.current?.send({ t: 'party', on: !partyRef.current });
         }
       },
       onSelect: setSelected,
@@ -207,6 +214,8 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
           setInfo(m.info);
           setWishes(m.wishes);
           setRole(m.role);
+          setPartyState(m.party);
+          scene.setParty(m.party);
           setError(null);
           if (m.role !== 'guest') {
             const key = session.create?.key ?? session.key;
@@ -266,6 +275,11 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
           else if (m.kind === 'toast') sfx.toast();
           else if (m.kind === 'kiss') sfx.kiss();
           else sfx.chime();
+          return;
+        case 'party':
+          setPartyState(m.on);
+          scene.setParty(m.on);
+          if (m.on) sfx.confetti();
           return;
         case 'fx':
           scene.firework(m.x, m.y);
@@ -417,10 +431,16 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
           )}
 
           {!editing && showHint && <div className="hint">Chạm để đi · WASD/mũi tên · Chạm ghế để ngồi · Chạm 🎁 📻 🔔 🎆 để tương tác</div>}
+          {party && !editing && (
+            <div className="party-banner">
+              <span className="dot" />🪩 <b>Chế độ Bar</b> · DJ tự động đang quẩy
+              <button onClick={() => send({ t: 'party', on: false })}>Tắt</button>
+            </div>
+          )}
           {editing && <div className="edit-hint">👻 Đang ẩn khách mời để bạn trang trí dễ hơn · Kéo nền để di chuyển góc nhìn</div>}
           {musicOpen && info && (
             <MusicPanel
-              info={info}
+              info={party ? { ...info, music: 'club' as never } : info}
               couple={couple}
               enabled={musicOn}
               volume={volume}
@@ -438,6 +458,9 @@ export function WeddingScreen({ session, profile, onProfile, onLeave, onCodeTake
                   <span>{c.icon}</span>{c.name}
                 </button>
               ))}
+              <button className={party ? 'party-on' : ''} onClick={() => send({ t: 'party', on: !party })}>
+                <span>🪩</span>{party ? 'Tắt Bar' : 'Bật Bar'}
+              </button>
             </div>
           )}
 

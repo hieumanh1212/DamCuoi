@@ -12,6 +12,9 @@ export const LIMITS = {
   /** số lời chúc tối đa một người gửi trong một lần vào phòng */
   wishesPerVisit: 3,
   ceremonyCooldown: 4000,
+  /** bật/tắt chế độ Bar tối đa mỗi 3 giây; tự tắt sau 15 phút */
+  partyCooldown: 3000,
+  partyMaxMs: 15 * 60_000,
 } as const;
 
 export const CODE_RE = /^[A-Z0-9]{5,8}$/;
@@ -136,6 +139,7 @@ export type ClientMsg =
   | { t: 'info'; info: Partial<WeddingInfo> }
   | { t: 'resetLayout' }
   | { t: 'fx'; kind: 'firework'; x: number; y: number }
+  | { t: 'party'; on: boolean }
   | { t: 'ping' };
 
 // ───────── Server → Client ─────────
@@ -149,6 +153,8 @@ export type ServerMsg =
       items: Item[];
       wishes: Wish[];
       players: PlayerState[];
+      /** chế độ Bar đang bật */
+      party: boolean;
     }
   | { t: 'join'; p: PlayerState }
   | { t: 'leave'; id: string }
@@ -162,4 +168,5 @@ export type ServerMsg =
   | { t: 'delWish'; id: number }
   | { t: 'ceremony'; kind: CeremonyKind; by: string; target?: string }
   | { t: 'fx'; kind: 'firework'; x: number; y: number; by: string }
+  | { t: 'party'; on: boolean; by: string }
   | { t: 'error'; code: ErrorCode; message: string };

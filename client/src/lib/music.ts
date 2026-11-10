@@ -3,7 +3,7 @@
 // - Các bài còn lại: giai điệu sáng tác riêng cho dự án
 // Hoặc phát link file nhạc (mp3/ogg) do cô dâu chú rể dán vào.
 
-type Inst = 'piano' | 'strings' | 'bass' | 'bell' | 'pluck' | 'kick' | 'hat';
+type Inst = 'piano' | 'strings' | 'bass' | 'bell' | 'pluck' | 'kick' | 'hat' | 'clap' | 'saw' | 'supersaw';
 interface Note {
   t: number; // phách (beat) tính từ đầu vòng lặp
   n: number; // midi
@@ -169,7 +169,33 @@ function festive(): Track {
   return { bpm: 116, length: bars * 4, events: ev };
 }
 
-const TRACK_BUILDERS: Record<string, () => Track> = { canon, bridal, romance, waltz, festive };
+/** Sáng tác riêng: EDM 126 BPM cho chế độ Bar — Am F C G */
+function club(): Track {
+  const prog = [['A2', 'C4', 'E4', 'A4'], ['F2', 'A3', 'C4', 'F4'], ['C3', 'E4', 'G4', 'C5'], ['G2', 'B3', 'D4', 'G4']].map((c) => c.map(midi));
+  const ev: Note[] = [];
+  const bars = 16;
+  for (let b = 0; b < bars; b++) {
+    const ch = prog[Math.floor(b / 2) % 4];
+    const t0 = b * 4;
+    const build = b % 8 === 7; // ô nhịp dồn trước khi "drop"
+    for (let k = 0; k < 4; k++) if (!build || k < 2) ev.push({ t: t0 + k, n: 0, d: 0.3, v: 0.95, i: 'kick' });
+    if (b >= 2 && !build) for (const k of [1, 3]) ev.push({ t: t0 + k, n: 0, d: 0.2, v: 0.5, i: 'clap' });
+    if (build) for (let k = 0; k < 8; k++) ev.push({ t: t0 + 2 + k * 0.25, n: 0, d: 0.1, v: 0.18 + k * 0.05, i: 'clap' });
+    for (let k = 0; k < 4; k++) ev.push({ t: t0 + k + 0.5, n: 0, d: 0.15, v: 0.32, i: 'hat' });
+    if (b >= 4) for (let k = 0; k < 16; k++) if (k % 2 === 1) ev.push({ t: t0 + k * 0.25, n: 0, d: 0.05, v: 0.1, i: 'hat' });
+    if (b >= 1) for (let k = 0; k < 4; k++) ev.push({ t: t0 + k + 0.5, n: ch[0], d: 0.4, v: 0.5, i: 'saw' });
+    if (b >= 4 && !build) for (const k of [0, 0.75, 1.5, 2.5, 3.25]) ch.slice(1).forEach((n) => ev.push({ t: t0 + k, n, d: 0.35, v: 0.13, i: 'supersaw' }));
+    if (b >= 8) {
+      const arp = [1, 2, 3, 2, 1, 3, 2, 3];
+      for (let k = 0; k < 16; k++) ev.push({ t: t0 + k * 0.25, n: ch[arp[k % 8]] + 12, d: 0.2, v: 0.2, i: 'pluck' });
+    }
+  }
+  return { bpm: 126, length: bars * 4, events: ev };
+}
+
+export const PARTY_BPM = 126;
+
+const TRACK_BUILDERS: Record<string, () => Track> = { canon, bridal, romance, waltz, festive, club };
 
 // ───────── Bộ máy phát ─────────
 
@@ -407,6 +433,50 @@ class MusicEngine {
         env(g, 0.003, v, 0.0001, 0.2, 0.05, at + 0.22);
         o.start(at);
         o.stop(at + 0.35);
+        return;
+      }
+      case 'clap': {
+        const src = ctx.createBufferSource();
+        src.buffer = this.noise;
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = 1400;
+        bp.Q.value = 0.8;
+        const g = ctx.createGain();
+        src.connect(bp).connect(g);
+        g.connect(this.master);
+        g.connect(this.wet);
+        env(g, 0.002, v * 0.9, 0.0001, 0.16, 0.03, at + 0.18);
+        src.start(at);
+        src.stop(at + 0.3);
+        return;
+      }
+      case 'saw': {
+        const g = ctx.createGain();
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.Q.value = 6;
+        lp.frequency.setValueAtTime(260, at);
+        lp.frequency.exponentialRampToValueAtTime(1500, at + 0.04);
+        lp.frequency.exponentialRampToValueAtTime(320, at + 0.3);
+        const o1 = osc('sawtooth', f), o2 = osc('square', f / 2);
+        const g2 = ctx.createGain(); g2.gain.value = 0.4;
+        o1.connect(g); o2.connect(g2).connect(g);
+        g.connect(lp).connect(this.master);
+        env(g, 0.005, v, v * 0.3, 0.2, 0.08, at + dur);
+        for (const o of [o1, o2]) { o.start(at); o.stop(at + dur + 0.3); }
+        return;
+      }
+      case 'supersaw': {
+        const g = ctx.createGain();
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = 3200;
+        const os = [-14, -6, 0, 6, 14].map((dt) => osc('sawtooth', f, dt));
+        os.forEach((o) => o.connect(g));
+        g.connect(lp).connect(out);
+        env(g, 0.006, v, v * 0.2, 0.25, 0.15, at + dur);
+        os.forEach((o) => { o.start(at); o.stop(at + dur + 0.5); });
         return;
       }
       case 'hat': {

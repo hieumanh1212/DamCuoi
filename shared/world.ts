@@ -20,11 +20,11 @@ export type ItemType =
   | 'rose_wall' | 'heart_arch' | 'flower_stand' | 'vase_tall' | 'light_string' | 'chandelier' | 'ribbon'
   | 'bird_cage' | 'sakura' | 'mai' | 'dao' | 'palm' | 'pond' | 'lantern_hoian' | 'star_lamp'
   | 'rug_square' | 'grass' | 'heart_tile'
-  | 'jukebox' | 'bell' | 'wishtree' | 'karaoke' | 'fireworks'
+  | 'jukebox' | 'bell' | 'wishtree' | 'karaoke' | 'fireworks' | 'discoball'
   | 'giftbox' | 'guestbook' | 'photo';
 
 export type Layer = 'floor' | 'object';
-export type Interact = 'gift' | 'guestbook' | 'photo' | 'sit' | 'music' | 'bell' | 'wish' | 'sing' | 'firework';
+export type Interact = 'gift' | 'guestbook' | 'photo' | 'sit' | 'music' | 'bell' | 'wish' | 'sing' | 'firework' | 'party';
 
 export interface ItemDef {
   type: ItemType;
@@ -89,7 +89,8 @@ export const CATALOG: ItemDef[] = [
   { type: 'wine', name: 'Xe rượu vang', icon: '🍷', w: 1, h: 1, layer: 'object', solid: true, group: 'Bàn ghế' },
   { type: 'drums', name: 'Bộ trống', icon: '🥁', w: 2, h: 2, layer: 'object', solid: true, colorable: true, group: 'Sân khấu' },
   { type: 'guitar', name: 'Đàn guitar', icon: '🎸', w: 1, h: 1, layer: 'object', solid: true, group: 'Sân khấu' },
-  { type: 'dj', name: 'Bàn DJ', icon: '🎧', w: 2, h: 1, layer: 'object', solid: true, group: 'Sân khấu' },
+  { type: 'dj', name: 'Bàn DJ (bật Bar)', icon: '🎧', w: 2, h: 1, layer: 'object', solid: true, interact: 'party', group: 'Sân khấu' },
+  { type: 'discoball', name: 'Quả cầu disco', icon: '🪩', w: 1, h: 1, layer: 'object', solid: false, group: 'Sân khấu' },
   { type: 'spotlight', name: 'Đèn sân khấu', icon: '🔦', w: 1, h: 1, layer: 'object', solid: true, colorable: true, group: 'Sân khấu' },
   { type: 'screen', name: 'Màn chiếu', icon: '📽️', w: 3, h: 1, layer: 'object', solid: true, group: 'Sân khấu' },
   { type: 'mrmrs', name: 'Chữ Mr & Mrs', icon: '💑', w: 2, h: 1, layer: 'object', solid: true, colorable: true, group: 'Sân khấu' },
@@ -271,6 +272,8 @@ export function defaultLayout(): Item[] {
   add('balloons', 7, 5);
   add('balloons', 28, 5);
   add('love', 17, 3);
+  add('dj', 25, 3);
+  add('discoball', 17, 8);
   add('candles', 12, 3);
   add('candles', 23, 3);
   add('pillar', 6, 3);

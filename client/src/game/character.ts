@@ -8,6 +8,8 @@ export interface CharPose {
   d: number; // 0 xuống (nhìn về phía người xem), 1 trái, 2 lên (quay lưng), 3 phải
   walk: number; // pha bước chân (radian), -1 = đứng yên
   sitting: boolean;
+  /** pha nhảy theo nhạc (radian) — chỉ khi đứng yên */
+  dance?: number;
 }
 
 const R = 10; // bán kính đầu
@@ -29,14 +31,19 @@ interface P {
   accC: string;
   female: boolean;
   walk: number; // -1..1
+  /** đang nhảy: pha nhịp (radian), -1 nếu không */
+  dance: number;
 }
 
 export function drawCharacter(ctx: Ctx, px: number, py: number, rawLook: Look, role: Role, pose: CharPose) {
   const look = weddingLook(rawLook, role);
   const walking = pose.walk >= 0 && !pose.sitting;
   const sw = walking ? Math.sin(pose.walk) : 0;
-  const bob = walking ? Math.abs(sw) * 1.6 : Math.sin(performance.now() / 600) * 0.35;
+  const dancing = !walking && !pose.sitting && pose.dance !== undefined && pose.dance >= 0;
+  const dance = dancing ? pose.dance! : -1;
+  const bob = walking ? Math.abs(sw) * 1.6 : dancing ? Math.abs(Math.sin(dance)) * 3 : Math.sin(performance.now() / 600) * 0.35;
   const by = py - bob + (pose.sitting ? 5 : 0);
+  if (dancing) px += Math.sin(dance / 2) * 1.4;
   const p: P = {
     ctx, px, by, hy: by - 27, top: by - 16,
     side: pose.d === 1 ? -1 : pose.d === 3 ? 1 : 0,
@@ -49,6 +56,7 @@ export function drawCharacter(ctx: Ctx, px: number, py: number, rawLook: Look, r
     accC: CLOTH_COLORS[look.accColor] ?? '#e53935',
     female: look.gender === 'female',
     walk: sw,
+    dance,
   };
 
   softShadow(ctx, px, py + 1, look.top === 'gown' ? 15 : 12, 4.5, 0.28);
@@ -327,6 +335,17 @@ function arms(p: P) {
   const sleeve = bare ? p.skin : t === 'overall' ? '#ffffff' : jc;
   const sw = p.walk ? p.walk * 2.2 : 0;
   const off = p.female ? 8.4 : 9.2;
+  if (p.dance >= 0) {
+    // giơ tay theo nhịp
+    const up = (ax: number, ph: number) => {
+      const lift = 6 + Math.abs(Math.sin(p.dance + ph)) * 4;
+      fillRR(ctx, ax - 2.2, top - lift + 2, 4.4, lift + 2, 2.2, vgrad(ctx, top - lift, top + 3, bare ? p.skin : sleeve, 0.2, -0.2));
+      ball(ctx, ax + (ax < px ? -0.5 : 0.5), top - lift + 1, 2.3, p.skin);
+    };
+    if (side !== 1) up(px - off, 0);
+    if (side !== -1) up(px + off, Math.PI / 2);
+    return;
+  }
   const arm = (ax: number, dy: number) => {
     fillRR(ctx, ax - 2.2, top + 1 + dy, 4.4, 9, 2.2, vgrad(ctx, top, top + 10, p.skin, 0.2, -0.2));
     if (!bare) fillRR(ctx, ax - 2.3, top + 0.5 + dy, 4.6, short ? 4.5 : 9, 2.2, vgrad(ctx, top, top + 10, sleeve, 0.2, -0.2));

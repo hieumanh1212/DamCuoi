@@ -4,6 +4,8 @@ import {
   HALL_H, HALL_W, ITEM_DEFS, TILE, buildBlocked, canPlace, findPath, isBlocked, itemSize, itemTiles,
   type Interact, type Item, type ItemType,
 } from '../../../shared/world';
+import type { Look } from '../../../shared/look';
+import { PARTY_BPM } from '../lib/music';
 import { drawCharacter } from './character';
 import { accentOf, circle, drawBubble, drawHall, drawItem, drawNameTag, flower, heart, hexA, itemDepth } from './draw';
 
@@ -35,6 +37,11 @@ const WORLD_H = HALL_H * TILE;
 const CHAIR_DIR = [0, 1, 2, 3]; // rot của ghế → hướng ngồi
 /** Nhân vật được vẽ to hơn ô một chút cho dễ nhìn */
 const CHAR_SCALE = 1.15;
+/** DJ tự động của chế độ Bar */
+const DJ_LOOK: Look = {
+  gender: 'male', skin: 3, face: 'happy', hair: 'spiky', hairColor: 13, top: 'hoodie', topColor: 4,
+  bottom: 'jeans', bottomColor: 20, accessory: 'sunglasses', accColor: 0,
+};
 
 export class Scene {
   private ctx: CanvasRenderingContext2D;
@@ -70,6 +77,7 @@ export class Scene {
   private hover: { x: number; y: number } | null = null;
 
   private effects: Effect[] = [];
+  private party = false;
   private raf = 0;
   private last = 0;
   private ro: ResizeObserver;
@@ -207,6 +215,16 @@ export class Scene {
       delay: i * 0.35 + Math.random() * 0.2,
     }));
     this.effects.push({ kind: 'firework', x: x * TILE, y: y * TILE, start: performance.now(), bursts });
+  }
+
+  /** Chế độ Bar: tối đèn, đèn quét, chớp theo nhịp, DJ tự động, mọi người nhảy */
+  setParty(on: boolean) {
+    this.party = on;
+  }
+
+  /** Nhịp nhạc dùng đồng hồ chung nên mọi máy nhảy gần như cùng lúc */
+  private beat() {
+    return (Date.now() / 1000) * (PARTY_BPM / 60);
   }
 
   // ───────── Trang trí ─────────
@@ -609,6 +627,33 @@ export class Scene {
         },
       });
     }
+    const partyOn = this.party && !this.editing;
+    const dance = partyOn ? this.beat() * Math.PI : undefined;
+    if (partyOn) {
+      const dj = this.djSpot();
+      list.push({
+        depth: dj.y - 0.05,
+        draw: () => {
+          ctx.save();
+          ctx.translate(dj.x * TILE, dj.y * TILE + 8);
+          ctx.scale(CHAR_SCALE, CHAR_SCALE);
+          drawCharacter(ctx, 0, 0, DJ_LOOK, 'guest', { d: 0, walk: -1, sitting: false, dance });
+          // tai nghe
+          const bob = Math.abs(Math.sin(dance ?? 0)) * 3;
+          const hx = Math.sin((dance ?? 0) / 2) * 1.4, hy = -27 - bob;
+          ctx.strokeStyle = '#212121';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(hx, hy, 11, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
+          for (const s of [-1, 1]) {
+            ctx.fillStyle = '#212121';
+            ctx.beginPath(); ctx.ellipse(hx + s * 10.5, hy + 1, 2.6, 3.8, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ff4f8b';
+            ctx.beginPath(); ctx.ellipse(hx + s * 10.5, hy + 1, 1.2, 2, 0, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.restore();
+        },
+      });
+    }
     for (const [id, a] of this.editing ? [] : this.actors) {
       list.push({
         depth: a.ry + (a.state.s ? 0.05 : 0),
@@ -616,7 +661,7 @@ export class Scene {
           ctx.save();
           ctx.translate(a.rx * TILE, a.ry * TILE + 8);
           ctx.scale(CHAR_SCALE, CHAR_SCALE);
-          drawCharacter(ctx, 0, 0, a.state.look, a.state.role, { d: a.state.d, walk: a.walk, sitting: a.state.s });
+          drawCharacter(ctx, 0, 0, a.state.look, a.state.role, { d: a.state.d, walk: a.walk, sitting: a.state.s, dance: dance !== undefined && a.walk < 0 ? dance + (id.charCodeAt(0) % 3) * 0.3 : undefined });
           ctx.restore();
         },
       });
@@ -626,6 +671,7 @@ export class Scene {
     for (const x of list) x.draw();
 
     if (this.editing) this.drawEditOverlay();
+    if (partyOn) this.drawParty(t);
 
     // tên, bong bóng chat, biểu cảm (luôn ở trên)
     const now = performance.now();
@@ -651,6 +697,116 @@ export class Scene {
     }
 
     this.drawEffects(now);
+  }
+
+  /** Vị trí DJ: sau bàn DJ đầu tiên, hoặc giữa sân khấu */
+  private djSpot() {
+    const dj = this.items.find((i) => i.type === 'dj');
+    if (!dj) return { x: 17.5, y: 4.4 };
+    const s = itemSize(dj);
+    return { x: dj.x + s.w / 2, y: dj.y - 0.1 };
+  }
+
+  private drawParty(t: number) {
+    const ctx = this.ctx;
+    const b = this.beat();
+    const frac = b % 1;
+    const bar = Math.floor(b) % 4;
+    const palette = ['#ff2d95', '#00e5ff', '#b388ff', '#ffea00', '#00ff9d', '#ff6d00'];
+    const s = this.scale, d = this.dpr;
+    const toScreen = () => ctx.setTransform(d * s, 0, 0, d * s, d * (this.vw / 2 - this.camX * s), d * (this.vh / 2 - this.camY * s));
+
+    // 1) tối đèn toàn sảnh
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = 'rgba(10, 3, 28, 0.62)';
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.restore();
+
+    ctx.save();
+    toScreen();
+    ctx.globalCompositeOperation = 'lighter';
+
+    // 2) đồ phát sáng
+    const glow = (x: number, y: number, r: number, c: string, a: number) => {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, hexA(c, a));
+      g.addColorStop(1, hexA(c, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    for (const it of this.items) {
+      const sz = itemSize(it);
+      const cx = (it.x + sz.w / 2) * TILE, cy = (it.y + sz.h / 2) * TILE;
+      switch (it.type) {
+        case 'dancefloor': glow(cx, cy, 52, palette[(Math.floor(b) + it.id) % palette.length], 0.55); break;
+        case 'lamp': case 'candles': case 'lantern': case 'lantern_hoian': case 'star_lamp': glow(cx, cy - 10, 30, '#ffcc80', 0.35); break;
+        case 'light_string': case 'tree_lights': case 'chandelier': glow(cx, cy - 20, 40, '#fff59d', 0.3); break;
+        case 'love': case 'mrmrs': glow(cx, cy, 36, '#ff4f8b', 0.4 + 0.2 * (1 - frac)); break;
+        case 'dj': glow(cx, cy, 46, palette[Math.floor(b / 2) % palette.length], 0.5); break;
+        case 'fountain': case 'pond': glow(cx, cy, 40, '#4fc3f7', 0.3); break;
+        case 'spotlight': glow(cx, cy - 20, 50, palette[Math.floor(b) % palette.length], 0.4); break;
+      }
+    }
+
+    // 3) đèn quét từ sân khấu
+    const W = HALL_W * TILE, H = HALL_H * TILE;
+    const n = 6;
+    for (let i = 0; i < n; i++) {
+      const ox = W * (0.12 + (0.76 * i) / (n - 1)), oy = TILE * 1.2;
+      const ang = Math.PI / 2 + Math.sin(t / 900 + i * 1.3) * 0.75;
+      const len = H * 1.05, spread = 0.13;
+      const c = palette[(i + Math.floor(b / 4)) % palette.length];
+      const g = ctx.createLinearGradient(ox, oy, ox + Math.cos(ang) * len, oy + Math.sin(ang) * len);
+      g.addColorStop(0, hexA(c, 0.38));
+      g.addColorStop(1, hexA(c, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(ox, oy);
+      ctx.lineTo(ox + Math.cos(ang - spread) * len, oy + Math.sin(ang - spread) * len);
+      ctx.lineTo(ox + Math.cos(ang + spread) * len, oy + Math.sin(ang + spread) * len);
+      ctx.closePath();
+      ctx.fill();
+      glow(ox + Math.cos(ang) * len * 0.55, oy + Math.sin(ang) * len * 0.55, 44, c, 0.22);
+    }
+
+    // 4) laser từ bàn DJ (đổi kiểu mỗi ô nhịp)
+    const dj = this.djSpot();
+    const lx = dj.x * TILE, ly = dj.y * TILE;
+    ctx.lineWidth = 1.4;
+    for (let i = 0; i < 9; i++) {
+      const a = Math.PI * (0.15 + (0.7 * i) / 8) + Math.sin(t / 400 + bar) * 0.25;
+      ctx.strokeStyle = hexA(bar % 2 ? '#00ff9d' : '#ff2d95', 0.55 * (1 - frac * 0.6));
+      ctx.beginPath();
+      ctx.moveTo(lx, ly);
+      ctx.lineTo(lx + Math.cos(a) * W, ly + Math.sin(a) * W);
+      ctx.stroke();
+    }
+
+    // 5) đốm sáng quả cầu disco quét khắp sàn
+    const balls = this.items.filter((i) => i.type === 'discoball');
+    const sources = balls.length ? balls.map((i) => ({ x: (i.x + 0.5) * TILE, y: (i.y + 0.5) * TILE })) : [{ x: W / 2, y: H * 0.4 }];
+    for (const src of sources) {
+      for (let k = 0; k < 70; k++) {
+        const a = k * 2.399 + t / 2400;
+        const r = 30 + ((k * 53) % 420);
+        const x = src.x + Math.cos(a) * r * 1.3, y = src.y + Math.sin(a) * r * 0.8;
+        ctx.fillStyle = k % 4 ? 'rgba(255,255,255,0.55)' : hexA(palette[k % palette.length], 0.75);
+        ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+      }
+    }
+    ctx.restore();
+
+    // 6) chớp đèn theo nhịp (mạnh hơn ở phách đầu ô nhịp)
+    if (frac < 0.12) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = `rgba(255,255,255,${(bar === 0 ? 0.16 : 0.07) * (1 - frac / 0.12)})`;
+      ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      ctx.restore();
+    }
   }
 
   private drawGrid() {

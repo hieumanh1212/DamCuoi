@@ -990,6 +990,25 @@ export function drawItem(ctx: Ctx, it: Item, info: WeddingInfo, t: number) {
         ctx.fillStyle = on ? ['#ff4f8b', '#ffd54f', '#4fc3f7'][i % 3] : '#455a64';
         ctx.fillRect(cx - 9 + i * 3, y + ph - 6, 2, 3);
       }
+      bounceHint(ctx, cx, y - 6, t, '🪩');
+      return;
+    }
+    case 'discoball': {
+      const top = y - T * 1.6;
+      softShadow(ctx, cx, y + 26, 9, 3, 0.15);
+      ctx.strokeStyle = 'rgba(80,80,90,0.7)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(cx, top - 14); ctx.lineTo(cx, top); ctx.stroke();
+      ball(ctx, cx, top + 9, 10, '#cfd8dc');
+      const rot = (t / 900) % 1;
+      for (let r = 0; r < 4; r++) for (let k = 0; k < 6; k++) {
+        const a = ((k + rot) / 6) * Math.PI * 2;
+        const xx = cx + Math.cos(a) * 8 * Math.sin(((r + 0.5) / 4) * Math.PI);
+        if (Math.sin(a) < 0) continue;
+        const on = (k + r + Math.floor(t / 180)) % 3 === 0;
+        ctx.fillStyle = on ? '#ffffff' : 'rgba(120,130,150,0.55)';
+        ctx.fillRect(xx - 1.2, top + 2 + r * 4, 2.4, 2.4);
+      }
       return;
     }
     case 'spotlight': {

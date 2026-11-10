@@ -17,6 +17,7 @@ export function nowPlayingName(info: WeddingInfo) {
   const id = info.music ?? 'canon';
   if (id === 'off') return 'Đã tắt nhạc';
   if (id === 'url') return 'Nhạc do cô dâu chú rể chọn';
+  if ((id as string) === 'club') return '🪩 Chế độ Bar — EDM 126 BPM';
   return MUSIC_TRACKS.find((t) => t.id === id)?.name ?? '';
 }
 

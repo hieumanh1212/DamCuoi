@@ -234,6 +234,31 @@ describe('Đám cưới', () => {
 });
 
 
+describe('Chế độ Bar', () => {
+  it('khách bật được từ bàn DJ; có giới hạn tần suất; người mới vào thấy trạng thái', async () => {
+    const { w, last, msgs } = await created();
+    w.join('g1', 'ABCDE', hello({ name: 'Minh' }));
+    expect(last('g1', 'welcome')!.party).toBe(false);
+    w.handle('g1', { t: 'party', on: true });
+    expect(last('groom', 'party')).toMatchObject({ on: true, by: 'g1' });
+    w.handle('g1', { t: 'party', on: false }); // quá nhanh → bỏ qua
+    expect(msgs('groom').filter((m) => m.t === 'party')).toHaveLength(1);
+    w.join('g2', 'ABCDE', hello());
+    expect(last('g2', 'welcome')!.party).toBe(true);
+  });
+
+  it('không có bàn DJ thì khách không bật được, cô dâu chú rể vẫn bật được', async () => {
+    const { w, last } = await created();
+    const items = last('groom', 'welcome')!.items;
+    for (const it of items.filter((i) => i.type === 'dj')) w.handle('groom', { t: 'remove', id: it.id });
+    w.join('g1', 'ABCDE', hello());
+    w.handle('g1', { t: 'party', on: true });
+    expect(last('groom', 'party')).toBeUndefined();
+    w.handle('groom', { t: 'party', on: true });
+    expect(last('g1', 'party')?.on).toBe(true);
+  });
+});
+
 describe('Ngoại hình', () => {
   it('chuyển ngoại hình định dạng cũ sang mới, giá trị lạ thì dùng mặc định', async () => {
     const { sanitizeLook, weddingLook } = await import('../shared/look');
