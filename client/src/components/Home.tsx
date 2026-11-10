@@ -14,6 +14,7 @@ export function Home({ onCreate, onJoin }: Props) {
   const [role, setRole] = useState<'groom' | 'bride'>('groom');
   const [code, setCode] = useState('');
   const [err, setErr] = useState('');
+  const [joinErr, setJoinErr] = useState('');
   const mine = myWeddings();
 
   return (
@@ -67,13 +68,14 @@ export function Home({ onCreate, onJoin }: Props) {
             onSubmit={(e) => {
               e.preventDefault();
               const c = code.trim().toUpperCase();
-              if (!CODE_RE.test(c)) return setErr('Mã đám cưới không hợp lệ.');
+              if (!CODE_RE.test(c)) return setJoinErr('Mã đám cưới không hợp lệ.');
               onJoin(c);
             }}
           >
-            <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="MÃ CƯỚI" maxLength={8} />
+            <input value={code} onChange={(e) => { setCode(e.target.value.toUpperCase()); setJoinErr(''); }} placeholder="MÃ CƯỚI" maxLength={8} />
             <button className="btn primary" type="submit">Vào</button>
           </form>
+          {joinErr && <p className="error">{joinErr}</p>}
 
           {mine.length > 0 && (
             <div className="mine">
